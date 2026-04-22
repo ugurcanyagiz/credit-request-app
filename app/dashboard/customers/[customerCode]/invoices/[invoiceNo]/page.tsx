@@ -150,7 +150,7 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Invoice Items</h2>
-        <InvoiceItemsTable items={items} />
+        <InvoiceItemsTable items={items} customerCode={customerCode} invoiceNo={invoiceNo} />
       </section>
     </main>
   );
