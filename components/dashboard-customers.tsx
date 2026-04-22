@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 
@@ -60,10 +61,15 @@ export function DashboardCustomers() {
         {customers.map((customer) => (
           <li
             key={customer.customer_code}
-            className="rounded-md border border-zinc-200 px-3 py-2 text-sm"
+            className="rounded-md border border-zinc-200 text-sm"
           >
-            <p className="font-medium">{customer.customer_code}</p>
-            <p className="text-zinc-600">{customer.customer_name}</p>
+            <Link
+              href={`/dashboard/customers/${encodeURIComponent(customer.customer_code)}`}
+              className="block px-3 py-2 transition-colors hover:bg-zinc-50"
+            >
+              <p className="font-medium">{customer.customer_code}</p>
+              <p className="text-zinc-600">{customer.customer_name}</p>
+            </Link>
           </li>
         ))}
       </ul>
