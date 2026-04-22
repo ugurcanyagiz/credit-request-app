@@ -8,6 +8,8 @@ type CartItem = {
   invoice_no: string;
   item_no: string;
   item_descp: string;
+  sales_batch_number: string | null;
+  sales_lot_no: string | null;
   credit_type: "case" | "piece";
   credit_amount: number;
   created_at: string;
@@ -52,6 +54,48 @@ export function GlobalCartWidget() {
     await loadCart();
   }
 
+  function sendCreditRequestEmail() {
+    if (items.length === 0) {
+      return;
+    }
+
+    const headers = [
+      "Customer Code",
+      "Invoice",
+      "Item",
+      "Descrp",
+      "Type",
+      "Amount",
+      "Batch No",
+      "Lot No",
+    ];
+
+    const rows = items.map((item) => [
+      item.customer_code,
+      item.invoice_no,
+      item.item_no,
+      item.item_descp,
+      item.credit_type,
+      Number(item.credit_amount).toFixed(2),
+      item.sales_batch_number ?? "-",
+      item.sales_lot_no ?? "-",
+    ]);
+
+    const lines = [
+      "Credit Request",
+      "",
+      headers.join(" | "),
+      ...rows.map((row) => row.join(" | ")),
+      "",
+      `Total Amount: ${totalAmount.toFixed(2)}`,
+    ];
+
+    const subject = "Credit Request";
+    const body = lines.join("\n");
+    const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  }
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void loadCart();
@@ -91,13 +135,23 @@ export function GlobalCartWidget() {
                 <h3 className="text-lg font-semibold">Cart</h3>
                 <p className="text-sm text-zinc-600">Total amount: {totalAmount.toFixed(2)}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-md border border-zinc-300 px-2 py-1 text-xs"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={sendCreditRequestEmail}
+                  disabled={items.length === 0}
+                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Send Credit Request
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
             {items.length === 0 ? (
@@ -113,6 +167,8 @@ export function GlobalCartWidget() {
                       <th className="px-3 py-2 font-medium">Description</th>
                       <th className="px-3 py-2 font-medium">Type</th>
                       <th className="px-3 py-2 font-medium">Amount</th>
+                      <th className="px-3 py-2 font-medium">Batch No</th>
+                      <th className="px-3 py-2 font-medium">Lot No</th>
                       <th className="px-3 py-2 font-medium">Action</th>
                     </tr>
                   </thead>
@@ -125,6 +181,8 @@ export function GlobalCartWidget() {
                         <td className="px-3 py-2">{item.item_descp}</td>
                         <td className="px-3 py-2">{item.credit_type}</td>
                         <td className="px-3 py-2">{Number(item.credit_amount).toFixed(2)}</td>
+                        <td className="px-3 py-2">{item.sales_batch_number ?? "-"}</td>
+                        <td className="px-3 py-2">{item.sales_lot_no ?? "-"}</td>
                         <td className="px-3 py-2">
                           <button
                             type="button"
