@@ -17,25 +17,38 @@ export async function GET() {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
+  const pageSize = 1000;
+  let from = 0;
+  const customersByCode = new Map<string, CreditRowCustomer>();
+  let hasMore = true;
 
-  const { data, error } = await supabaseAdmin
-    .from("credit_rows")
-    .select("customer_code,customer_name")
-    .eq("salesperson", salespersonName)
-    .order("customer_code", { ascending: true });
+  while (hasMore) {
+    const to = from + pageSize - 1;
+    const { data, error } = await supabaseAdmin
+      .from("credit_rows")
+      .select("customer_code,customer_name")
+      .eq("salesperson", salespersonName)
+      .order("customer_code", { ascending: true })
+      .range(from, to);
 
-  if (error) {
-    console.error("Failed to fetch customers", error);
-    return Response.json({ error: "Failed to fetch customers" }, { status: 500 });
+    if (error) {
+      console.error("Failed to fetch customers", error);
+      return Response.json({ error: "Failed to fetch customers" }, { status: 500 });
+    }
+
+    const rows = (data as CreditRowCustomer[]) ?? [];
+
+    for (const row of rows) {
+      if (row.customer_code && row.customer_name && !customersByCode.has(row.customer_code)) {
+        customersByCode.set(row.customer_code, row);
+      }
+    }
+
+    hasMore = rows.length === pageSize;
+    from += pageSize;
   }
 
-  const uniqueCustomers = Array.from(
-    new Map(
-      (data as CreditRowCustomer[])
-        .filter((row) => row.customer_code && row.customer_name)
-        .map((row) => [row.customer_code, row]),
-    ).values(),
-  );
+  const uniqueCustomers = Array.from(customersByCode.values());
 
   return Response.json({ customers: uniqueCustomers });
 }
