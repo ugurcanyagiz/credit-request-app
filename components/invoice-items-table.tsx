@@ -153,7 +153,7 @@ export function InvoiceItemsTable({ items }: InvoiceItemsTableProps) {
               {creditType === "case" ? (
                 <div className="space-y-2 text-sm">
                   <label className="block">
-                    <span className="mb-1 block text-zinc-700">Case adedi</span>
+                    <span className="mb-1 block text-zinc-700">Case Quantity</span>
                     <input
                       type="number"
                       min="0"
@@ -163,14 +163,11 @@ export function InvoiceItemsTable({ items }: InvoiceItemsTableProps) {
                       className="w-full rounded-md border border-zinc-300 px-3 py-2"
                     />
                   </label>
-                  <p className="text-zinc-600">
-                    Formül: piece_price × case adedi = {selectedItem.piece_price} × {caseCount || 0}
-                  </p>
                 </div>
               ) : (
                 <div className="space-y-2 text-sm">
                   <label className="block">
-                    <span className="mb-1 block text-zinc-700">Bir case içindeki adet</span>
+                    <span className="mb-1 block text-zinc-700">Pieces Per Case</span>
                     <input
                       type="number"
                       min="1"
@@ -181,7 +178,7 @@ export function InvoiceItemsTable({ items }: InvoiceItemsTableProps) {
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-zinc-700">Talep edilen piece adedi</span>
+                    <span className="mb-1 block text-zinc-700">Requested Piece Quantity</span>
                     <input
                       type="number"
                       min="1"
@@ -191,25 +188,15 @@ export function InvoiceItemsTable({ items }: InvoiceItemsTableProps) {
                       className="w-full rounded-md border border-zinc-300 px-3 py-2"
                     />
                   </label>
-
-                  <p className="text-zinc-600">
-                    Piece fiyatı = piece_price / case içi adet = {selectedItem.piece_price} / {piecesPerCase || 0}
-                  </p>
-                  <p className="text-zinc-600">
-                    Formül: piece fiyatı × talep edilen piece adedi
-                  </p>
-                  <p className="text-zinc-600">
-                    Referans: piece fiyatı × (piece_price / piece fiyatı) = piece_price
-                  </p>
                 </div>
               )}
 
               <div className="mt-4 rounded-md bg-zinc-50 p-3 text-sm">
-                <p className="font-medium">Otomatik Kredi Talep Tutarı</p>
+                <p className="font-medium">Calculated Credit Request Amount</p>
                 <p className="mt-1 text-lg font-semibold">
                   {autoCreditAmount !== null && Number.isFinite(autoCreditAmount)
                     ? autoCreditAmount.toFixed(2)
-                    : "Hesaplama için gerekli alanları doldurun"}
+                    : "Please fill in required fields"}
                 </p>
               </div>
             </div>
