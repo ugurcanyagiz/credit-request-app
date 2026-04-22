@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-import { supabaseAdmin } from "./supabase-admin";
+import { getSupabaseAdmin } from "./supabase-admin";
 
 type VerifiedUserRow = {
   user_id: string;
@@ -24,6 +24,8 @@ export const authOptions: NextAuthOptions = {
         if (!username || !password) {
           return null;
         }
+
+        const supabaseAdmin = getSupabaseAdmin();
 
         const { data, error } = await supabaseAdmin.rpc(
           "verify_app_user_password",

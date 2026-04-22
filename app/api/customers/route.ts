@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type CreditRowCustomer = {
   customer_code: string | null;
@@ -15,6 +15,8 @@ export async function GET() {
   if (!salespersonName) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const supabaseAdmin = getSupabaseAdmin();
 
   const { data, error } = await supabaseAdmin
     .from("credit_rows")
