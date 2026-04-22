@@ -95,10 +95,15 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
           {invoices.map((invoice) => (
             <li
               key={invoice.invoice_no}
-              className="rounded-md border border-zinc-200 px-3 py-2 text-sm"
+              className="rounded-md border border-zinc-200 text-sm"
             >
-              <p className="font-medium">Invoice No: {invoice.invoice_no}</p>
-              <p className="text-zinc-600">Invoice Date: {invoice.invoice_date}</p>
+              <Link
+                href={`/dashboard/customers/${encodeURIComponent(customerCode)}/invoices/${encodeURIComponent(invoice.invoice_no)}`}
+                className="block px-3 py-2 transition-colors hover:bg-zinc-50"
+              >
+                <p className="font-medium">Invoice No: {invoice.invoice_no}</p>
+                <p className="text-zinc-600">Invoice Date: {invoice.invoice_date}</p>
+              </Link>
             </li>
           ))}
         </ul>
