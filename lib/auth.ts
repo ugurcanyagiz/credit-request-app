@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { getSupabaseAdmin } from "./supabase-admin";
 
 type VerifiedUserRow = {
-  user_id: string;
+  user_id: string | number;
   username: string;
   salesperson_name: string;
 };
@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         return {
-          id: user.user_id,
+          id: String(user.user_id),
           name: user.username,
           salespersonName: user.salesperson_name,
         };
