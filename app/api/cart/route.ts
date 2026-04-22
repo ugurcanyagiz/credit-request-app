@@ -20,7 +20,31 @@ type CartInsertPayload = {
 };
 
 async function resolveUserId(session: Session): Promise<string | null> {
-  return session.user?.id ?? null;
+  if (session.user?.id) {
+    return session.user.id;
+  }
+
+  if (!session.user?.name) {
+    return null;
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
+    .from("app_users")
+    .select("id")
+    .eq("username", session.user.name)
+    .maybeSingle<{ id: number }>();
+
+  if (error) {
+    console.error("Failed to resolve app_users.id from username", error);
+    return null;
+  }
+
+  if (typeof data?.id !== "number") {
+    return null;
+  }
+
+  return String(data.id);
 }
 
 export async function GET() {
@@ -103,7 +127,10 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Failed to add cart item", error);
-    return Response.json({ error: "Failed to add cart item" }, { status: 500 });
+    return Response.json(
+      { error: "Failed to add cart item", details: error.message, code: error.code },
+      { status: 500 },
+    );
   }
 
   return Response.json({ ok: true }, { status: 201 });
