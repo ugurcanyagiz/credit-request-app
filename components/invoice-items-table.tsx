@@ -1,0 +1,221 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+type InvoiceItem = {
+  item_no: string;
+  item_descp: string;
+  quantity: number;
+  sales_amount: number;
+  sales_batch_number: string;
+  sales_lot_no: string;
+  batch_expiration_date: string;
+  piece_price: number;
+};
+
+type CreditType = "case" | "piece";
+
+type InvoiceItemsTableProps = {
+  items: InvoiceItem[];
+};
+
+export function InvoiceItemsTable({ items }: InvoiceItemsTableProps) {
+  const [selectedItem, setSelectedItem] = useState<InvoiceItem | null>(null);
+  const [creditType, setCreditType] = useState<CreditType>("case");
+  const [caseCount, setCaseCount] = useState<string>("");
+  const [piecesPerCase, setPiecesPerCase] = useState<string>("");
+  const [requestedPieces, setRequestedPieces] = useState<string>("");
+
+  const numericCaseCount = Number(caseCount);
+  const numericPiecesPerCase = Number(piecesPerCase);
+  const numericRequestedPieces = Number(requestedPieces);
+
+  const pieceUnitPrice = useMemo(() => {
+    if (!selectedItem || !Number.isFinite(numericPiecesPerCase) || numericPiecesPerCase <= 0) {
+      return null;
+    }
+
+    return selectedItem.piece_price / numericPiecesPerCase;
+  }, [numericPiecesPerCase, selectedItem]);
+
+  const caseCreditAmount = useMemo(() => {
+    if (!selectedItem || !Number.isFinite(numericCaseCount) || numericCaseCount <= 0) {
+      return null;
+    }
+
+    return selectedItem.piece_price * numericCaseCount;
+  }, [numericCaseCount, selectedItem]);
+
+  const pieceCreditAmount = useMemo(() => {
+    if (!pieceUnitPrice || !Number.isFinite(numericRequestedPieces) || numericRequestedPieces <= 0) {
+      return null;
+    }
+
+    return pieceUnitPrice * numericRequestedPieces;
+  }, [pieceUnitPrice, numericRequestedPieces]);
+
+  const autoCreditAmount = creditType === "case" ? caseCreditAmount : pieceCreditAmount;
+
+  function openModal(item: InvoiceItem) {
+    setSelectedItem(item);
+    setCreditType("case");
+    setCaseCount("");
+    setPiecesPerCase("");
+    setRequestedPieces("");
+  }
+
+  function closeModal() {
+    setSelectedItem(null);
+  }
+
+  return (
+    <>
+      <div className="overflow-x-auto rounded-md border border-zinc-200">
+        <table className="min-w-full text-sm">
+          <thead className="bg-zinc-50 text-left">
+            <tr>
+              <th className="px-3 py-2 font-medium">Item No</th>
+              <th className="px-3 py-2 font-medium">Item Description</th>
+              <th className="px-3 py-2 font-medium">Quantity</th>
+              <th className="px-3 py-2 font-medium">Sales Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => (
+              <tr key={`${item.item_no}-${index}`} className="border-t border-zinc-200">
+                <td className="px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => openModal(item)}
+                    className="font-medium text-blue-700 underline-offset-2 hover:underline"
+                  >
+                    {item.item_no}
+                  </button>
+                </td>
+                <td className="px-3 py-2">{item.item_descp}</td>
+                <td className="px-3 py-2">{item.quantity}</td>
+                <td className="px-3 py-2">{item.sales_amount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selectedItem ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <h3 className="text-lg font-semibold">Product Detail & Credit Request</h3>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-md border border-zinc-300 px-2 py-1 text-xs"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid gap-2 text-sm">
+              <p><span className="font-medium">Item No:</span> {selectedItem.item_no}</p>
+              <p><span className="font-medium">Item Description:</span> {selectedItem.item_descp}</p>
+              <p><span className="font-medium">Quantity:</span> {selectedItem.quantity}</p>
+              <p><span className="font-medium">Sales Amount:</span> {selectedItem.sales_amount}</p>
+              <p><span className="font-medium">Sales Batch Number:</span> {selectedItem.sales_batch_number}</p>
+              <p><span className="font-medium">Sales Lot No:</span> {selectedItem.sales_lot_no}</p>
+              <p><span className="font-medium">Batch Expiration Date:</span> {selectedItem.batch_expiration_date}</p>
+              <p><span className="font-medium">Case Price (piece_price):</span> {selectedItem.piece_price}</p>
+            </div>
+
+            <div className="mt-5 rounded-md border border-zinc-200 p-4">
+              <h4 className="mb-3 font-semibold">Credit Request Amount</h4>
+
+              <div className="mb-4 flex gap-4 text-sm">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="credit-type"
+                    checked={creditType === "case"}
+                    onChange={() => setCreditType("case")}
+                  />
+                  Case credit
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="credit-type"
+                    checked={creditType === "piece"}
+                    onChange={() => setCreditType("piece")}
+                  />
+                  Piece credit
+                </label>
+              </div>
+
+              {creditType === "case" ? (
+                <div className="space-y-2 text-sm">
+                  <label className="block">
+                    <span className="mb-1 block text-zinc-700">Case adedi</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={caseCount}
+                      onChange={(event) => setCaseCount(event.target.value)}
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                    />
+                  </label>
+                  <p className="text-zinc-600">
+                    Formül: piece_price × case adedi = {selectedItem.piece_price} × {caseCount || 0}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                  <label className="block">
+                    <span className="mb-1 block text-zinc-700">Bir case içindeki adet</span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={piecesPerCase}
+                      onChange={(event) => setPiecesPerCase(event.target.value)}
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-zinc-700">Talep edilen piece adedi</span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={requestedPieces}
+                      onChange={(event) => setRequestedPieces(event.target.value)}
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                    />
+                  </label>
+
+                  <p className="text-zinc-600">
+                    Piece fiyatı = piece_price / case içi adet = {selectedItem.piece_price} / {piecesPerCase || 0}
+                  </p>
+                  <p className="text-zinc-600">
+                    Formül: piece fiyatı × talep edilen piece adedi
+                  </p>
+                  <p className="text-zinc-600">
+                    Referans: piece fiyatı × (piece_price / piece fiyatı) = piece_price
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 rounded-md bg-zinc-50 p-3 text-sm">
+                <p className="font-medium">Otomatik Kredi Talep Tutarı</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {autoCreditAmount !== null && Number.isFinite(autoCreditAmount)
+                    ? autoCreditAmount.toFixed(2)
+                    : "Hesaplama için gerekli alanları doldurun"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { InvoiceItemsTable } from "@/components/invoice-items-table";
 
 type InvoiceItemRow = {
   customer_name: string | null;
@@ -12,6 +13,10 @@ type InvoiceItemRow = {
   item_descp: string | null;
   quantity: number | string | null;
   sales_amount: number | string | null;
+  sales_batch_number: string | null;
+  sales_lot_no: string | null;
+  batch_expiration_date: string | null;
+  piece_price: number | string | null;
 };
 
 type InvoiceItemsPageProps = {
@@ -40,6 +45,10 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
     item_descp: string;
     quantity: number;
     sales_amount: number;
+    sales_batch_number: string;
+    sales_lot_no: string;
+    batch_expiration_date: string;
+    piece_price: number;
   }> = [];
 
   function toNumber(value: number | string | null): number | null {
@@ -61,7 +70,9 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
     const to = from + pageSize - 1;
     const { data, error } = await supabaseAdmin
       .from("credit_rows")
-      .select("customer_name,invoice_date,item_no,item_descp,quantity,sales_amount")
+      .select(
+        "customer_name,invoice_date,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price",
+      )
       .eq("salesperson", session.user.salespersonName)
       .eq("customer_code", customerCode)
       .eq("invoice_no", invoiceNo)
@@ -86,13 +97,27 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
 
       const quantity = toNumber(row.quantity);
       const salesAmount = toNumber(row.sales_amount);
+      const piecePrice = toNumber(row.piece_price);
 
-      if (row.item_no && row.item_descp && quantity !== null && salesAmount !== null) {
+      if (
+        row.item_no &&
+        row.item_descp &&
+        quantity !== null &&
+        salesAmount !== null &&
+        row.sales_batch_number &&
+        row.sales_lot_no &&
+        row.batch_expiration_date &&
+        piecePrice !== null
+      ) {
         items.push({
           item_no: row.item_no,
           item_descp: row.item_descp,
           quantity,
           sales_amount: salesAmount,
+          sales_batch_number: row.sales_batch_number,
+          sales_lot_no: row.sales_lot_no,
+          batch_expiration_date: row.batch_expiration_date,
+          piece_price: piecePrice,
         });
       }
     }
@@ -125,29 +150,7 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Invoice Items</h2>
-
-        <div className="overflow-x-auto rounded-md border border-zinc-200">
-          <table className="min-w-full text-sm">
-            <thead className="bg-zinc-50 text-left">
-              <tr>
-                <th className="px-3 py-2 font-medium">Item No</th>
-                <th className="px-3 py-2 font-medium">Item Description</th>
-                <th className="px-3 py-2 font-medium">Quantity</th>
-                <th className="px-3 py-2 font-medium">Sales Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => (
-                <tr key={`${item.item_no}-${index}`} className="border-t border-zinc-200">
-                  <td className="px-3 py-2">{item.item_no}</td>
-                  <td className="px-3 py-2">{item.item_descp}</td>
-                  <td className="px-3 py-2">{item.quantity}</td>
-                  <td className="px-3 py-2">{item.sales_amount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <InvoiceItemsTable items={items} />
       </section>
     </main>
   );
