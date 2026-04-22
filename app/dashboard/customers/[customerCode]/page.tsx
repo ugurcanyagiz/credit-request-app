@@ -1,0 +1,108 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+
+import { authOptions } from "@/lib/auth";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+type CreditRowInvoice = {
+  customer_name: string | null;
+  invoice_no: string | null;
+  invoice_date: string | null;
+};
+
+type CustomerInvoicesPageProps = {
+  params: Promise<{ customerCode: string }>;
+};
+
+export default async function CustomerInvoicesPage({ params }: CustomerInvoicesPageProps) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.salespersonName) {
+    redirect("/");
+  }
+
+  const { customerCode: rawCustomerCode } = await params;
+  const customerCode = decodeURIComponent(rawCustomerCode);
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const pageSize = 1000;
+  let from = 0;
+  let hasMore = true;
+  let customerName: string | null = null;
+  const invoicesByNo = new Map<string, { invoice_no: string; invoice_date: string }>();
+
+  while (hasMore) {
+    const to = from + pageSize - 1;
+    const { data, error } = await supabaseAdmin
+      .from("credit_rows")
+      .select("customer_name,invoice_no,invoice_date")
+      .eq("salesperson", session.user.salespersonName)
+      .eq("customer_code", customerCode)
+      .order("invoice_no", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      console.error("Failed to fetch customer invoices", error);
+      throw new Error("Failed to fetch customer invoices");
+    }
+
+    const rows = (data as CreditRowInvoice[]) ?? [];
+
+    for (const row of rows) {
+      if (!customerName && row.customer_name) {
+        customerName = row.customer_name;
+      }
+
+      if (row.invoice_no && row.invoice_date && !invoicesByNo.has(row.invoice_no)) {
+        invoicesByNo.set(row.invoice_no, {
+          invoice_no: row.invoice_no,
+          invoice_date: row.invoice_date,
+        });
+      }
+    }
+
+    hasMore = rows.length === pageSize;
+    from += pageSize;
+  }
+
+  if (!customerName && invoicesByNo.size === 0) {
+    notFound();
+  }
+
+  const invoices = Array.from(invoicesByNo.values());
+
+  return (
+    <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-10">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-zinc-600">Customer</p>
+          <h1 className="text-2xl font-semibold">{customerName ?? customerCode}</h1>
+          <p className="text-sm text-zinc-600">Code: {customerCode}</p>
+        </div>
+        <Link
+          href="/dashboard"
+          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
+        >
+          Back
+        </Link>
+      </div>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Invoices</h2>
+
+        <ul className="space-y-2">
+          {invoices.map((invoice) => (
+            <li
+              key={invoice.invoice_no}
+              className="rounded-md border border-zinc-200 px-3 py-2 text-sm"
+            >
+              <p className="font-medium">Invoice No: {invoice.invoice_no}</p>
+              <p className="text-zinc-600">Invoice Date: {invoice.invoice_date}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  );
+}
