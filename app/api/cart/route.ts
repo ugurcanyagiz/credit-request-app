@@ -20,31 +20,15 @@ type CartInsertPayload = {
 };
 
 async function resolveUserId(session: Session): Promise<string | null> {
-  if (session.user?.id) {
-    return session.user.id;
-  }
-
-  if (!session.user?.name) {
+  const userId = session.user?.id;
+  if (!userId) {
     return null;
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin
-    .from("app_users")
-    .select("id")
-    .eq("username", session.user.name)
-    .maybeSingle<{ id: number }>();
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-  if (error) {
-    console.error("Failed to resolve app_users.id from username", error);
-    return null;
-  }
-
-  if (typeof data?.id !== "number") {
-    return null;
-  }
-
-  return String(data.id);
+  return uuidRegex.test(userId) ? userId : null;
 }
 
 export async function GET() {
