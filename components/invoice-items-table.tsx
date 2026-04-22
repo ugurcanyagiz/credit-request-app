@@ -19,12 +19,28 @@ type InvoiceItemsTableProps = {
   items: InvoiceItem[];
 };
 
+type CartItem = {
+  id: string;
+  item_no: string;
+  item_descp: string;
+  quantity: number;
+  sales_amount: number;
+  sales_batch_number: string;
+  sales_lot_no: string;
+  batch_expiration_date: string;
+  piece_price: number;
+  credit_type: CreditType;
+  credit_amount: number;
+};
+
 export function InvoiceItemsTable({ items }: InvoiceItemsTableProps) {
   const [selectedItem, setSelectedItem] = useState<InvoiceItem | null>(null);
   const [creditType, setCreditType] = useState<CreditType>("case");
   const [caseCount, setCaseCount] = useState<string>("");
   const [piecesPerCase, setPiecesPerCase] = useState<string>("");
   const [requestedPieces, setRequestedPieces] = useState<string>("");
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   const numericCaseCount = Number(caseCount);
   const numericPiecesPerCase = Number(piecesPerCase);
@@ -68,8 +84,45 @@ export function InvoiceItemsTable({ items }: InvoiceItemsTableProps) {
     setSelectedItem(null);
   }
 
+  function addSelectedItemToCart() {
+    if (!selectedItem || autoCreditAmount === null || !Number.isFinite(autoCreditAmount)) {
+      return;
+    }
+
+    const cartItem: CartItem = {
+      id: `${selectedItem.item_no}-${Date.now()}`,
+      item_no: selectedItem.item_no,
+      item_descp: selectedItem.item_descp,
+      quantity: selectedItem.quantity,
+      sales_amount: selectedItem.sales_amount,
+      sales_batch_number: selectedItem.sales_batch_number,
+      sales_lot_no: selectedItem.sales_lot_no,
+      batch_expiration_date: selectedItem.batch_expiration_date,
+      piece_price: selectedItem.piece_price,
+      credit_type: creditType,
+      credit_amount: autoCreditAmount,
+    };
+
+    setCartItems((previous) => [...previous, cartItem]);
+    setSelectedItem(null);
+  }
+
+  function removeFromCart(id: string) {
+    setCartItems((previous) => previous.filter((item) => item.id !== id));
+  }
+
   return (
     <>
+      <div className="mb-3 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => setIsCartOpen(true)}
+          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
+        >
+          🛒 Cart ({cartItems.length})
+        </button>
+      </div>
+
       <div className="overflow-x-auto rounded-md border border-zinc-200">
         <table className="min-w-full text-sm">
           <thead className="bg-zinc-50 text-left">
@@ -199,7 +252,72 @@ export function InvoiceItemsTable({ items }: InvoiceItemsTableProps) {
                     : "Please fill in required fields"}
                 </p>
               </div>
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={addSelectedItemToCart}
+                  disabled={autoCreditAmount === null || !Number.isFinite(autoCreditAmount)}
+                  className="rounded-md bg-zinc-900 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isCartOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-4xl rounded-lg bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <h3 className="text-lg font-semibold">Cart Items</h3>
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(false)}
+                className="rounded-md border border-zinc-300 px-2 py-1 text-xs"
+              >
+                Close
+              </button>
+            </div>
+
+            {cartItems.length === 0 ? (
+              <p className="text-sm text-zinc-600">No items added yet.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-md border border-zinc-200">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-zinc-50 text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Item No</th>
+                      <th className="px-3 py-2 font-medium">Item Description</th>
+                      <th className="px-3 py-2 font-medium">Credit Type</th>
+                      <th className="px-3 py-2 font-medium">Credit Amount</th>
+                      <th className="px-3 py-2 font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cartItems.map((item) => (
+                      <tr key={item.id} className="border-t border-zinc-200">
+                        <td className="px-3 py-2">{item.item_no}</td>
+                        <td className="px-3 py-2">{item.item_descp}</td>
+                        <td className="px-3 py-2">{item.credit_type}</td>
+                        <td className="px-3 py-2">{item.credit_amount.toFixed(2)}</td>
+                        <td className="px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(item.id)}
+                            className="rounded-md border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       ) : null}
