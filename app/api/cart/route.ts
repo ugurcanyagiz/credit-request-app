@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { Session } from "next-auth";
 
 type CartInsertPayload = {
   customer_code?: string;
@@ -18,10 +19,39 @@ type CartInsertPayload = {
   credit_amount?: number;
 };
 
+async function resolveUserId(session: Session): Promise<string | null> {
+  if (session.user?.id) {
+    return session.user.id;
+  }
+
+  if (!session.user?.name) {
+    return null;
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
+    .from("app_users")
+    .select("user_id")
+    .eq("username", session.user.name)
+    .maybeSingle<{ user_id: string }>();
+
+  if (error) {
+    console.error("Failed to resolve user_id from app_users", error);
+    return null;
+  }
+
+  return data?.user_id ?? null;
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.id || !session.user.salespersonName) {
+  if (!session?.user?.salespersonName) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = await resolveUserId(session);
+  if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -32,7 +62,7 @@ export async function GET() {
     .select(
       "id,customer_code,invoice_no,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price,credit_type,credit_amount,created_at",
     )
-    .eq("user_id", session.user.id)
+    .eq("user_id", userId)
     .eq("salesperson", session.user.salespersonName)
     .order("created_at", { ascending: false });
 
@@ -47,7 +77,12 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.id || !session.user.salespersonName) {
+  if (!session?.user?.salespersonName) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = await resolveUserId(session);
+  if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -70,7 +105,7 @@ export async function POST(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
 
   const { error } = await supabaseAdmin.from("credit_request_cart_items").insert({
-    user_id: session.user.id,
+    user_id: userId,
     salesperson: session.user.salespersonName,
     customer_code: payload.customer_code,
     invoice_no: payload.invoice_no,
@@ -97,7 +132,12 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.id || !session.user.salespersonName) {
+  if (!session?.user?.salespersonName) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = await resolveUserId(session);
+  if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -113,7 +153,7 @@ export async function DELETE(request: Request) {
     .from("credit_request_cart_items")
     .delete()
     .eq("id", id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", userId)
     .eq("salesperson", session.user.salespersonName);
 
   if (error) {

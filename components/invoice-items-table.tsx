@@ -28,6 +28,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
   const [piecesPerCase, setPiecesPerCase] = useState<string>("");
   const [requestedPieces, setRequestedPieces] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const numericCaseCount = Number(caseCount);
   const numericPiecesPerCase = Number(piecesPerCase);
@@ -65,6 +66,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
     setCaseCount("");
     setPiecesPerCase("");
     setRequestedPieces("");
+    setSubmitError(null);
   }
 
   function closeModal() {
@@ -77,6 +79,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
     }
 
     setIsSubmitting(true);
+    setSubmitError(null);
     const response = await fetch("/api/cart", {
       method: "POST",
       headers: {
@@ -100,6 +103,8 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
     setIsSubmitting(false);
 
     if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      setSubmitError(payload?.error ?? "Failed to add item to cart");
       return;
     }
 
@@ -238,6 +243,8 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
                     : "Please fill in required fields"}
                 </p>
               </div>
+
+              {submitError ? <p className="mt-3 text-sm text-red-600">{submitError}</p> : null}
 
               <div className="mt-4 flex justify-end">
                 <button
