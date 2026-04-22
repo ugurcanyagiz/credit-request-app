@@ -20,27 +20,7 @@ type CartInsertPayload = {
 };
 
 async function resolveUserId(session: Session): Promise<string | null> {
-  if (session.user?.id) {
-    return session.user.id;
-  }
-
-  if (!session.user?.name) {
-    return null;
-  }
-
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin
-    .from("app_users")
-    .select("user_id")
-    .eq("username", session.user.name)
-    .maybeSingle<{ user_id: string }>();
-
-  if (error) {
-    console.error("Failed to resolve user_id from app_users", error);
-    return null;
-  }
-
-  return data?.user_id ?? null;
+  return session.user?.id ?? null;
 }
 
 export async function GET() {
@@ -52,7 +32,7 @@ export async function GET() {
 
   const userId = await resolveUserId(session);
   if (!userId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized: missing user id in session" }, { status: 401 });
   }
 
   const supabaseAdmin = getSupabaseAdmin();
@@ -83,7 +63,7 @@ export async function POST(request: Request) {
 
   const userId = await resolveUserId(session);
   if (!userId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized: missing user id in session" }, { status: 401 });
   }
 
   const payload = (await request.json()) as CartInsertPayload;
@@ -138,7 +118,7 @@ export async function DELETE(request: Request) {
 
   const userId = await resolveUserId(session);
   if (!userId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized: missing user id in session" }, { status: 401 });
   }
 
   const url = new URL(request.url);
