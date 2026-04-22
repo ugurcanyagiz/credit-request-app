@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { getSupabaseAdmin } from "./supabase-admin";
 
 type VerifiedUserRow = {
-  user_id: string;
+  user_id: string | number;
   username: string;
   salesperson_name: string;
 };
@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         return {
-          id: user.user_id,
+          id: String(user.user_id),
           name: user.username,
           salespersonName: user.salesperson_name,
         };
@@ -64,6 +64,10 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
+      if (user?.id) {
+        token.userId = user.id;
+      }
+
       if (user?.salespersonName) {
         token.salespersonName = user.salespersonName;
       }
@@ -71,8 +75,14 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token.salespersonName) {
-        session.user.salespersonName = token.salespersonName as string;
+      if (session.user) {
+        if (token.userId || token.sub) {
+          session.user.id = (token.userId ?? token.sub) as string;
+        }
+
+        if (token.salespersonName) {
+          session.user.salespersonName = token.salespersonName as string;
+        }
       }
 
       return session;
