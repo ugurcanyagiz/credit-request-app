@@ -7,6 +7,16 @@ import type { Session } from "next-auth";
 const PHOTO_BUCKET = process.env.SUPABASE_CART_PHOTOS_BUCKET || "credit-request-cart-photos";
 const CART_PHOTO_FOLDER = "cart-photos";
 
+function resolveContentType(storagePath: string, fallback?: string) {
+  const extension = storagePath.split(".").pop()?.toLowerCase();
+  if (extension === "png") return "image/png";
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "webp") return "image/webp";
+  if (extension === "heic") return "image/heic";
+  if (extension === "heif") return "image/heif";
+  return fallback || "application/octet-stream";
+}
+
 async function resolveUserId(session: Session): Promise<string | null> {
   const userId = session.user?.id;
   return userId ? String(userId) : null;
@@ -45,7 +55,8 @@ export async function GET(request: Request) {
 
   return new Response(data, {
     headers: {
-      "Content-Type": data.type || "application/octet-stream",
+      "Content-Type": resolveContentType(storagePath, data.type),
+      "Content-Disposition": "inline",
       "Cache-Control": "private, max-age=300",
     },
   });
