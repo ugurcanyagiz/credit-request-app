@@ -1,6 +1,7 @@
 # Cart photo hosting setup (required for HTML photo rendering)
 
 This feature uploads cart photos to Supabase Storage and renders real image URLs in a hosted HTML credit request draft.
+Photos are uploaded as soon as users pick them in the cart UI, and those uploaded photos are reloaded from Supabase Storage when the cart is reopened/refreshed.
 
 ## Minimum required Supabase objects
 
@@ -61,6 +62,7 @@ Already used by current server-side Supabase access:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_PUBLIC_URL` (recommended when your server uses an internal Supabase URL; this must be browser-reachable and is used for email/public image links)
 
 New optional override (defaults to `credit-request-cart-photos`):
 
