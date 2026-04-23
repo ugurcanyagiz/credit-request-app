@@ -106,7 +106,7 @@ export function GlobalCartWidget() {
       "Customer Code",
       "Invoice",
       "Item",
-      "Descrp",
+      "Description",
       "Type",
       "Amount",
       "Batch No",
@@ -124,50 +124,49 @@ export function GlobalCartWidget() {
       item.sales_lot_no ?? "-",
     ]);
 
+    const columnWidths = headers.map((header, index) =>
+      Math.max(header.length, ...rows.map((row) => String(row[index]).length)),
+    );
+
+    function formatTableRow(row: string[]) {
+      return `| ${row.map((cell, index) => String(cell).padEnd(columnWidths[index], " ")).join(" | ")} |`;
+    }
+
+    const tableDivider = `|-${columnWidths.map((width) => "-".repeat(width)).join("-|-")}-|`;
+    const formattedTable = [
+      formatTableRow(headers),
+      tableDivider,
+      ...rows.map((row) => formatTableRow(row)),
+    ];
+
     const lines = [
-      "Credit Request",
+      "Dear Credit Department,",
       "",
-      headers.join(" | "),
-      ...rows.map((row) => row.join(" | ")),
+      "Please find the credit request details below;",
       "",
+      ...formattedTable,
+      "",
+      `| ${"".padEnd(columnWidths.slice(0, headers.length - 1).reduce((sum, width) => sum + width + 3, 0), " ")} | ${"Total Amount".padEnd(columnWidths[headers.length - 1], " ")} |`,
+      `|-${"-".repeat(columnWidths.slice(0, headers.length - 1).reduce((sum, width) => sum + width + 3, 0))}-|-${"-".repeat(columnWidths[headers.length - 1])}-|`,
+      `| ${"".padEnd(columnWidths.slice(0, headers.length - 1).reduce((sum, width) => sum + width + 3, 0), " ")} | ${totalAmount.toFixed(2).padEnd(columnWidths[headers.length - 1], " ")} |`,
+      "",
+      "PHOTOS:",
+      pictures.length > 0 ? pictures.map((file) => `- ${file.name}`).join("\n") : "- None",
       `Total Amount: ${totalAmount.toFixed(2)}`,
     ];
 
     try {
-      const canShareFiles =
-        typeof navigator !== "undefined" &&
-        typeof navigator.canShare === "function" &&
-        navigator.canShare({ files: pictures }) &&
-        typeof navigator.share === "function";
+      const body = lines.join("\n");
 
-      if (canShareFiles && pictures.length > 0) {
-        await navigator.share({
-          title: "Credit Request",
-          text: lines.join("\n"),
-          files: pictures,
-        });
-      } else {
-        const body =
-          pictures.length > 0
-            ? `${lines.join("\n")}\n\nSelected Pictures:\n${pictures.map((file) => `- ${file.name}`).join("\n")}`
-            : lines.join("\n");
-        const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailtoUrl;
-
-        if (pictures.length > 0) {
-          setSendError(
-            "Your browser does not support file attachments in share mode. Please attach selected pictures manually in your email client.",
-          );
-          return;
-        }
-      }
+      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoUrl;
 
       if (pictures.length > 0) {
-        setSendSuccessMessage("Credit request prepared with selected pictures.");
+        setSendError("Please attach selected pictures manually in your email client.");
         return;
       }
 
-      setSendSuccessMessage("Credit request email prepared successfully.");
+      setSendSuccessMessage("Credit request draft prepared successfully.");
     } catch {
       setSendError("Failed to send credit request email.");
     } finally {
