@@ -26,7 +26,6 @@ export function GlobalCartWidget() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccessMessage, setSendSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const cartRows = useMemo(() => {
     const isManualNote = (item: CartItem) => item.item_descp.includes("Reason:");
@@ -80,10 +79,6 @@ export function GlobalCartWidget() {
 
   function onPickPictures() {
     fileInputRef.current?.click();
-  }
-
-  function onTakePhoto() {
-    cameraInputRef.current?.click();
   }
 
   function onPicturesSelected(event: ChangeEvent<HTMLInputElement>) {
@@ -300,14 +295,6 @@ export function GlobalCartWidget() {
                     onChange={onPicturesSelected}
                     className="hidden"
                   />
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={onPicturesSelected}
-                    className="hidden"
-                  />
                   <button
                     type="button"
                     onClick={onPickPictures}
@@ -316,30 +303,6 @@ export function GlobalCartWidget() {
                     title="Add Pictures"
                   >
                     📷
-                  </button>
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={onPickPictures}
-                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50"
-                    >
-                      Add Pictures
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onTakePhoto}
-                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50"
-                    >
-                      Take Photo
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPictures([])}
-                    disabled={pictures.length === 0}
-                    className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Clear All
                   </button>
 
                   <div className="w-full rounded-md border border-zinc-200 bg-zinc-50 p-3">
