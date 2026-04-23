@@ -32,6 +32,40 @@ type CartPhoto = {
   previewUrl?: string;
 };
 
+type DisplayCartRow = CartItem & {
+  displayDescription: string;
+  reason: string | null;
+};
+
+function isStandaloneReasonRow(item: CartItem) {
+  return item.item_descp.trim().startsWith("Reason:");
+}
+
+function parseReasonAndDescription(itemDescription: string) {
+  const normalizedDescription = itemDescription.trim();
+
+  if (normalizedDescription.startsWith("Reason:")) {
+    const reason = normalizedDescription.replace(/^Reason:/, "").trim();
+    return { description: "-", reason: reason.length > 0 ? reason : null };
+  }
+
+  const splitOnReason = normalizedDescription.split(/\s*\|\s*Reason:\s*/i);
+  if (splitOnReason.length > 1) {
+    const [descriptionPart, ...reasonParts] = splitOnReason;
+    const reason = reasonParts.join(" | ").trim();
+    return {
+      description: descriptionPart.trim() || "-",
+      reason: reason.length > 0 ? reason : null,
+    };
+  }
+
+  return { description: normalizedDescription || "-", reason: null };
+}
+
+function toReasonRowKey(item: CartItem) {
+  return `${item.customer_code}::${item.invoice_no}::${item.item_no}`;
+}
+
 export function GlobalCartWidget() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -50,10 +84,44 @@ export function GlobalCartWidget() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cartRows = useMemo(() => {
-    const isManualNote = (item: CartItem) => item.item_descp.includes("Reason:");
+    const isManualNote = (item: CartItem) => isStandaloneReasonRow(item);
     const regularItems = items.filter((item) => !isManualNote(item));
     const noteItems = items.filter((item) => isManualNote(item));
     return [...regularItems, ...noteItems];
+  }, [items]);
+
+  const displayRows = useMemo<DisplayCartRow[]>(() => {
+    const reasonRowsByKey = new Map<string, string[]>();
+
+    for (const item of items) {
+      if (!isStandaloneReasonRow(item)) {
+        continue;
+      }
+
+      const parsed = parseReasonAndDescription(item.item_descp);
+      if (!parsed.reason) {
+        continue;
+      }
+
+      const key = toReasonRowKey(item);
+      const existing = reasonRowsByKey.get(key) ?? [];
+      existing.push(parsed.reason);
+      reasonRowsByKey.set(key, existing);
+    }
+
+    return items
+      .filter((item) => !isStandaloneReasonRow(item))
+      .map((item) => {
+        const parsed = parseReasonAndDescription(item.item_descp);
+        const key = toReasonRowKey(item);
+        const queuedReason = reasonRowsByKey.get(key)?.shift() ?? null;
+
+        return {
+          ...item,
+          displayDescription: parsed.description,
+          reason: parsed.reason ?? queuedReason,
+        };
+      });
   }, [items]);
 
   const loadCart = useCallback(async () => {
@@ -92,13 +160,31 @@ export function GlobalCartWidget() {
     setAuthorized(true);
   }, []);
 
-  async function removeItem(id: string) {
+  async function deleteCartItemById(id: string) {
     const response = await fetch(`/api/cart?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
 
-    if (!response.ok) {
+    return response.ok;
+  }
+
+  async function removeItem(id: string) {
+    const selectedItem = items.find((item) => item.id === id);
+    if (!selectedItem) {
       return;
+    }
+
+    const linkedReasonRows = items.filter(
+      (item) => isStandaloneReasonRow(item) && toReasonRowKey(item) === toReasonRowKey(selectedItem),
+    );
+
+    const didRemoveMainItem = await deleteCartItemById(id);
+    if (!didRemoveMainItem) {
+      return;
+    }
+
+    if (linkedReasonRows.length > 0) {
+      await Promise.all(linkedReasonRows.map((reasonRow) => deleteCartItemById(reasonRow.id)));
     }
 
     await loadCart();
@@ -322,7 +408,7 @@ export function GlobalCartWidget() {
                   <button
                     type="button"
                     onClick={() => void sendCreditRequest()}
-                    disabled={items.length === 0 || isSending || isRemovingAll}
+                    disabled={displayRows.length === 0 || isSending || isRemovingAll}
                     className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSending ? "Preparing Email Draft..." : "Send Credit Request"}
@@ -347,7 +433,7 @@ export function GlobalCartWidget() {
             </div>
 
             <div className="space-y-6 px-6 py-6 md:px-8">
-              {items.length === 0 ? (
+              {displayRows.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
                   No items in cart yet.
                 </p>
@@ -360,6 +446,7 @@ export function GlobalCartWidget() {
                         <th className="px-3 py-3 text-left font-semibold">Invoice No</th>
                         <th className="px-3 py-3 text-left font-semibold">Item No</th>
                         <th className="px-3 py-3 text-left font-semibold">Item Description</th>
+                        <th className="px-3 py-3 text-left font-semibold">Reason</th>
                         <th className="px-3 py-3 text-right font-semibold">Qty</th>
                         <th className="px-3 py-3 text-right font-semibold">Sales Amount</th>
                         <th className="px-3 py-3 text-right font-semibold">Piece Price</th>
@@ -369,12 +456,13 @@ export function GlobalCartWidget() {
                       </tr>
                     </thead>
                     <tbody>
-                      {cartRows.map((item) => (
+                      {displayRows.map((item) => (
                         <tr key={item.id} className="border-t border-slate-200 text-slate-700">
                           <td className="px-3 py-3">{item.customer_code}</td>
                           <td className="px-3 py-3">{item.invoice_no}</td>
                           <td className="px-3 py-3">{item.item_no}</td>
-                          <td className="px-3 py-3">{item.item_descp}</td>
+                          <td className="px-3 py-3">{item.displayDescription}</td>
+                          <td className="px-3 py-3">{item.reason ?? "—"}</td>
                           <td className="px-3 py-3 text-right">{item.quantity ?? 0}</td>
                           <td className="px-3 py-3 text-right">{Number(item.sales_amount ?? 0).toFixed(2)}</td>
                           <td className="px-3 py-3 text-right">{Number(item.piece_price ?? 0).toFixed(2)}</td>
