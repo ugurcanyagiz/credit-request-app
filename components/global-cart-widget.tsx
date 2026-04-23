@@ -22,6 +22,7 @@ type DraftResponse = {
 };
 
 type CartPhoto = {
+  id: string;
   fileName: string;
   publicUrl: string;
   storagePath: string;
@@ -34,6 +35,7 @@ export function GlobalCartWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [authorized, setAuthorized] = useState(true);
   const [pictures, setPictures] = useState<CartPhoto[]>([]);
+  const [selectedPicture, setSelectedPicture] = useState<CartPhoto | null>(null);
   const [isUploadingPictures, setIsUploadingPictures] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -48,7 +50,6 @@ export function GlobalCartWidget() {
     const noteItems = items.filter((item) => isManualNote(item));
     return [...regularItems, ...noteItems];
   }, [items]);
-
 
   const loadCart = useCallback(async () => {
     const response = await fetch("/api/cart", { cache: "no-store" });
@@ -139,11 +140,11 @@ export function GlobalCartWidget() {
     }
   }
 
-  async function removePicture(storagePath: string) {
+  async function removePicture(photoId: string) {
     const response = await fetch("/api/cart/photos", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ storagePath }),
+      body: JSON.stringify({ photoId }),
     });
 
     if (!response.ok) {
@@ -152,7 +153,8 @@ export function GlobalCartWidget() {
       return;
     }
 
-    setPictures((previousPictures) => previousPictures.filter((picture) => picture.storagePath !== storagePath));
+    setPictures((previousPictures) => previousPictures.filter((picture) => picture.id !== photoId));
+    setSelectedPicture((currentPicture) => (currentPicture?.id === photoId ? null : currentPicture));
   }
 
   async function prepareCreditRequestDraft() {
@@ -178,7 +180,6 @@ export function GlobalCartWidget() {
     try {
       const formData = new FormData();
       formData.set("cartRows", JSON.stringify(cartRows));
-      formData.set("photoRefs", JSON.stringify(pictures));
 
       const response = await fetch("/api/cart/credit-request-draft", {
         method: "POST",
@@ -279,7 +280,6 @@ export function GlobalCartWidget() {
             </div>
 
             <div className="space-y-6 px-6 py-6 md:px-8">
-
               {items.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
                   No items in cart yet.
@@ -358,25 +358,29 @@ export function GlobalCartWidget() {
                   {pictures.length > 0 ? (
                     <div className="flex flex-wrap gap-3">
                       {pictures.map((picture) => (
-                        <div
-                          key={picture.storagePath}
-                          className="relative h-24 w-24 overflow-hidden rounded-md border border-slate-300"
-                        >
+                        <div key={picture.id} className="relative h-24 w-24 overflow-hidden rounded-md border border-slate-300">
                           <button
                             type="button"
-                            onClick={() => void removePicture(picture.storagePath)}
+                            onClick={() => void removePicture(picture.id)}
                             className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white"
                             aria-label={`Remove ${picture.fileName}`}
                           >
                             ✕
                           </button>
-                          <Image
-                            src={picture.previewUrl ?? picture.publicUrl}
-                            alt={picture.fileName}
-                            width={96}
-                            height={96}
-                            className="h-full w-full object-cover"
-                          />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPicture(picture)}
+                            className="block h-full w-full"
+                            aria-label={`Preview ${picture.fileName}`}
+                          >
+                            <Image
+                              src={picture.previewUrl ?? picture.publicUrl}
+                              alt={picture.fileName}
+                              width={96}
+                              height={96}
+                              className="h-full w-full object-cover"
+                            />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -423,6 +427,34 @@ export function GlobalCartWidget() {
               </p>
             </div>
           </div>
+
+          {selectedPicture ? (
+            <div
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Photo preview"
+              onClick={() => setSelectedPicture(null)}
+            >
+              <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(event) => event.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPicture(null)}
+                  className="absolute -right-3 -top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm text-white"
+                  aria-label="Close photo preview"
+                >
+                  ✕
+                </button>
+                <Image
+                  src={selectedPicture.previewUrl ?? selectedPicture.publicUrl}
+                  alt={selectedPicture.fileName}
+                  width={1280}
+                  height={1280}
+                  className="max-h-[90vh] w-auto rounded-lg object-contain"
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </>

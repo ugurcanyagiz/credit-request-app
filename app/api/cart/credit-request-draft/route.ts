@@ -1,28 +1,14 @@
-import { randomUUID } from "node:crypto";
 import { getServerSession } from "next-auth";
 
 import { buildCreditRequestDraft, type CreditRequestCartItem } from "@/lib/credit-request-email";
 import { authOptions } from "@/lib/auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { buildSupabasePublicObjectUrl } from "@/lib/supabase-storage-url";
-import type { Session } from "next-auth";
+import { ensureCartDraftId, listDraftPhotos, resolveUserId } from "@/lib/cart-draft";
 
-const PHOTO_BUCKET = process.env.SUPABASE_CART_PHOTOS_BUCKET || "credit-request-cart-photos";
-const ACCEPTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const MAX_FILES = 8;
-const CART_PHOTO_FOLDER = "cart-photos";
-
-type ExistingPhotoRef = {
+type PersistedPhotoRef = {
   fileName: string;
   publicUrl: string;
   storagePath: string;
 };
-
-async function resolveUserId(session: Session): Promise<string | null> {
-  const userId = session.user?.id;
-  return userId ? String(userId) : null;
-}
 
 function isValidCartItem(value: unknown): value is CreditRequestCartItem {
   if (!value || typeof value !== "object") {
@@ -82,110 +68,28 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid cart row fields" }, { status: 400 });
   }
 
-  const cartRows = cartRowsCandidate as CreditRequestCartItem[];
-  const existingPhotosRaw = formData.get("photoRefs");
-  let existingPhotos: ExistingPhotoRef[] = [];
+  try {
+    const draftId = await ensureCartDraftId({ userId, salesperson: session.user.salespersonName });
+    const persistedPhotos = await listDraftPhotos(draftId);
 
-  if (typeof existingPhotosRaw === "string" && existingPhotosRaw.trim().length > 0) {
-    let existingPhotosCandidate: unknown;
-    try {
-      existingPhotosCandidate = JSON.parse(existingPhotosRaw) as unknown;
-    } catch {
-      return Response.json({ error: "Invalid photoRefs JSON" }, { status: 400 });
-    }
+    const uploadedPhotos: PersistedPhotoRef[] = persistedPhotos.map((photo) => ({
+      fileName: photo.file_name,
+      publicUrl: photo.public_url,
+      storagePath: photo.storage_path,
+    }));
 
-    if (!Array.isArray(existingPhotosCandidate)) {
-      return Response.json({ error: "Invalid photoRefs payload" }, { status: 400 });
-    }
-
-    const userPrefix = `${userId}/${CART_PHOTO_FOLDER}/`;
-    const parsedPhotos: ExistingPhotoRef[] = [];
-
-    for (const candidate of existingPhotosCandidate) {
-      if (!candidate || typeof candidate !== "object") {
-        return Response.json({ error: "Invalid photoRefs payload" }, { status: 400 });
-      }
-
-      const value = candidate as Partial<ExistingPhotoRef>;
-      if (
-        typeof value.fileName !== "string" ||
-        typeof value.publicUrl !== "string" ||
-        typeof value.storagePath !== "string" ||
-        !value.storagePath.startsWith(userPrefix)
-      ) {
-        return Response.json({ error: "Invalid photoRefs payload" }, { status: 400 });
-      }
-
-      parsedPhotos.push({
-        fileName: value.fileName,
-        publicUrl: value.publicUrl,
-        storagePath: value.storagePath,
-      });
-    }
-
-    existingPhotos = parsedPhotos;
-  }
-
-  const imageFiles = formData
-    .getAll("photos")
-    .filter((value): value is File => value instanceof File)
-    .filter((file) => file.size > 0);
-
-  if (imageFiles.length + existingPhotos.length > MAX_FILES) {
-    return Response.json({ error: `Too many files. Maximum is ${MAX_FILES}.` }, { status: 400 });
-  }
-
-  const supabaseAdmin = getSupabaseAdmin();
-  const timestampFolder = new Date().toISOString().slice(0, 10);
-  const uploadPrefix = `${userId}/${timestampFolder}`;
-
-  const uploadedPhotos: Array<{ fileName: string; publicUrl: string; storagePath: string }> = [...existingPhotos];
-
-  for (const file of imageFiles) {
-    if (!ACCEPTED_IMAGE_MIME_TYPES.has(file.type)) {
-      return Response.json({ error: `Unsupported file type for ${file.name}` }, { status: 400 });
-    }
-
-    if (file.size > MAX_FILE_BYTES) {
-      return Response.json({ error: `${file.name} exceeds ${MAX_FILE_BYTES / (1024 * 1024)} MB limit` }, { status: 400 });
-    }
-
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const safeTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const storagePath = `${uploadPrefix}/${safeTimestamp}-${randomUUID()}-${sanitizedName}`;
-    const arrayBuffer = await file.arrayBuffer();
-
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from(PHOTO_BUCKET)
-      .upload(storagePath, arrayBuffer, { contentType: file.type, upsert: false });
-
-    if (uploadError) {
-      console.error("Failed to upload credit request photo", uploadError);
-      return Response.json(
-        {
-          error: "Failed to upload one or more photos.",
-          details: uploadError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    uploadedPhotos.push({
-      fileName: file.name,
-      publicUrl: buildSupabasePublicObjectUrl(PHOTO_BUCKET, storagePath),
-      storagePath,
+    const draft = buildCreditRequestDraft({
+      cartRows: cartRowsCandidate as CreditRequestCartItem[],
+      uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
     });
+
+    return Response.json({
+      ok: true,
+      photos: uploadedPhotos,
+      draft,
+    });
+  } catch (error) {
+    console.error("Failed to prepare draft", error);
+    return Response.json({ error: "Failed to prepare draft" }, { status: 500 });
   }
-
-  const draft = buildCreditRequestDraft({
-    cartRows,
-    uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
-  });
-
-  return Response.json({
-    ok: true,
-    bucket: PHOTO_BUCKET,
-    photos: uploadedPhotos,
-    draft,
-  });
 }

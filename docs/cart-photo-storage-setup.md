@@ -1,15 +1,16 @@
-# Cart photo hosting setup (required for HTML photo rendering)
+# Cart photo hosting setup (required for persisted cart photo rendering)
 
-This feature uploads cart photos to Supabase Storage and renders real image URLs in a hosted HTML credit request draft.
-Photos are uploaded as soon as users pick them in the cart UI, and those uploaded photos are reloaded from Supabase Storage when the cart is reopened/refreshed.
+This feature uploads cart photos to Supabase Storage and persists photo mappings in SQL so photos survive modal close/reopen and page refresh.
+Photos are uploaded as soon as users pick them in the cart UI, and those uploaded photos are reloaded from SQL by stable cart draft id.
 
 ## Minimum required Supabase objects
 
 1. **Storage bucket** (required): `credit-request-cart-photos`.
 2. **Storage policies** (required): allow the app's server-side service role to upload/read/delete objects.
-3. **No new SQL table is required** for the current minimal architecture.
+3. **SQL table** (required): `public.credit_request_cart_drafts`.
+4. **SQL table** (required): `public.credit_request_photos`.
 
-## Step 1: Create Storage bucket (Required)
+## Step 1: Create/confirm Storage bucket (Required)
 
 In **Supabase Dashboard → Storage → New bucket**:
 
@@ -40,21 +41,36 @@ using (bucket_id = 'credit-request-cart-photos')
 with check (bucket_id = 'credit-request-cart-photos');
 ```
 
-Why required: uploads are performed in `app/api/cart/credit-request-draft/route.ts` using the server-side service role client.
+## Step 3: Persisted cart draft and photo tables (Required)
 
-## Optional hardening and tradeoffs
+Run this SQL in **Supabase SQL Editor**:
 
-### Option A (Current implementation): Public bucket + random object paths
+```sql
+create extension if not exists pgcrypto;
 
-- **Pros**: image URLs do not expire; best reliability for email rendering.
-- **Cons**: anyone with the exact URL can view the image.
+create table if not exists public.credit_request_cart_drafts (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,
+  salesperson text not null,
+  linked_credit_request_id uuid null references public.credit_requests(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  last_used_at timestamptz not null default now(),
+  unique (user_id, salesperson)
+);
 
-### Option B (Alternative): Private bucket + signed URLs
+create table if not exists public.credit_request_photos (
+  id uuid primary key default gen_random_uuid(),
+  draft_id uuid not null references public.credit_request_cart_drafts(id) on delete cascade,
+  file_name text not null,
+  public_url text not null,
+  storage_path text not null unique,
+  created_at timestamptz not null default now()
+);
 
-- **Pros**: tighter access control.
-- **Cons**: URLs expire and photos may stop rendering in old emails.
-
-If you switch to signed URLs later, update the API route to generate `createSignedUrl(...)` and communicate expiration behavior to users.
+create index if not exists credit_request_photos_draft_id_created_at_idx
+  on public.credit_request_photos (draft_id, created_at desc);
+```
 
 ## Required environment variables
 
