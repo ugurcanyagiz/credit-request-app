@@ -42,6 +42,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
   const [requestedPieces, setRequestedPieces] = useState<string>("");
   const [selectedReasons, setSelectedReasons] = useState<ReasonOption[]>([]);
   const [otherReason, setOtherReason] = useState("");
+  const [isReasonDropdownOpen, setIsReasonDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -95,6 +96,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
     setRequestedPieces("");
     setSelectedReasons([]);
     setOtherReason("");
+    setIsReasonDropdownOpen(false);
     setSubmitError(null);
   }
 
@@ -266,33 +268,50 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
 
             <div className="mt-5 rounded-md border border-zinc-200 p-4">
               <h4 className="mb-3 font-semibold">Reason</h4>
-              <div className="grid gap-2 text-sm sm:grid-cols-2">
-                {REASON_OPTIONS.map((option) => {
-                  const checked = selectedReasons.includes(option);
-                  return (
-                    <label key={option} className="inline-flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(event) => {
-                          if (event.target.checked) {
-                            setSelectedReasons((previousReasons) => [...previousReasons, option]);
-                            return;
-                          }
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsReasonDropdownOpen((previous) => !previous)}
+                  className="flex w-full items-center justify-between rounded-md border border-zinc-300 px-3 py-2 text-left text-sm"
+                >
+                  <span className="truncate">
+                    {selectedReasons.length > 0 ? selectedReasons.join(", ") : "Select reason(s)"}
+                  </span>
+                  <span className="ml-3 text-xs text-zinc-500">{isReasonDropdownOpen ? "▲" : "▼"}</span>
+                </button>
 
-                          setSelectedReasons((previousReasons) =>
-                            previousReasons.filter((reason) => reason !== option),
-                          );
+                {isReasonDropdownOpen ? (
+                  <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white p-2 shadow-lg">
+                    <div className="grid gap-2 text-sm">
+                      {REASON_OPTIONS.map((option) => {
+                        const checked = selectedReasons.includes(option);
+                        return (
+                          <label key={option} className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(event) => {
+                                if (event.target.checked) {
+                                  setSelectedReasons((previousReasons) => [...previousReasons, option]);
+                                  return;
+                                }
 
-                          if (option === "Other") {
-                            setOtherReason("");
-                          }
-                        }}
-                      />
-                      {option}
-                    </label>
-                  );
-                })}
+                                setSelectedReasons((previousReasons) =>
+                                  previousReasons.filter((reason) => reason !== option),
+                                );
+
+                                if (option === "Other") {
+                                  setOtherReason("");
+                                }
+                              }}
+                            />
+                            {option}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               {selectedReasons.includes("Other") ? (
