@@ -20,11 +20,92 @@ type CartItem = {
   created_at: string;
 };
 
-type AttachmentPayload = {
-  filename: string;
-  contentType: string;
-  base64Data: string;
-};
+const CREDIT_TEAM_EMAIL = "credit@turkanafood.com";
+
+function money(value: number) {
+  return Number.isFinite(value) ? value.toFixed(2) : "0.00";
+}
+
+function truncate(value: string, length: number) {
+  return value.length <= length ? value : `${value.slice(0, Math.max(0, length - 3))}...`;
+}
+
+function pad(value: string, width: number, align: "left" | "right" = "left") {
+  const text = truncate(value, width);
+  if (text.length >= width) {
+    return text;
+  }
+
+  return align === "right" ? text.padStart(width, " ") : text.padEnd(width, " ");
+}
+
+function formatUploadedPhotoReference(picture: File, index: number) {
+  const readableSizeInKb = (picture.size / 1024).toFixed(1);
+  const fileType = picture.type || "unknown-type";
+  return `Photo ${index + 1}: ${picture.name} (${fileType}, ${readableSizeInKb} KB)`;
+}
+
+function buildMailtoDraft({
+  cartRows,
+  pictures,
+}: {
+  cartRows: CartItem[];
+  pictures: File[];
+}) {
+  const nonNoteItems = cartRows.filter((item) => !item.item_descp.includes("Reason:"));
+  const uniqueCustomers = [...new Set(cartRows.map((item) => item.customer_code).filter(Boolean))];
+  const uniqueInvoices = [...new Set(cartRows.map((item) => item.invoice_no).filter(Boolean))];
+  const totalCreditAmount = cartRows.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0);
+
+  const subject = `Credit Request | Customer ${uniqueCustomers.join(", ") || "N/A"} | Invoice ${
+    uniqueInvoices.join(", ") || "N/A"
+  } | ${cartRows.length} Item(s)`;
+
+  const tableHeader = [
+    `${pad("Item No", 12)} ${pad("Description", 24)} ${pad("Qty", 6, "right")} ${pad("Sales Amt", 10, "right")} ${pad("Price", 10, "right")}`,
+    "------------------------------------------------------------",
+  ];
+
+  const tableRows = nonNoteItems.map((item) => {
+    return `${pad(item.item_no || "-", 12)} ${pad(item.item_descp || "-", 24)} ${pad(String(item.quantity ?? 0), 6, "right")} ${pad(
+      money(Number(item.sales_amount ?? 0)),
+      10,
+      "right",
+    )} ${pad(money(Number(item.piece_price ?? 0)), 10, "right")}`;
+  });
+
+  const noteRows = cartRows
+    .filter((item) => item.item_descp.includes("Reason:"))
+    .map((item) => item.item_descp.replace("Reason:", "").trim())
+    .filter(Boolean);
+
+  const photoLines = pictures.map((picture, index) => formatUploadedPhotoReference(picture, index));
+
+  const bodySections = [
+    "Hello Team,",
+    "",
+    "Please review the credit request details below.",
+    "",
+    `Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
+    `Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
+    `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
+    "",
+    "Selected Items:",
+    "------------------------------------------------------------",
+    ...tableHeader,
+    ...(tableRows.length > 0 ? tableRows : ["(No selected product rows found)"]),
+    "------------------------------------------------------------",
+    "",
+    ...(noteRows.length > 0 ? ["Notes:", ...noteRows.map((note, index) => `${index + 1}. ${note}`), ""] : []),
+    ...(photoLines.length > 0
+      ? ["Uploaded Photo References:", ...photoLines, "", "Please find the related photos above.", ""]
+      : ["Uploaded Photo References: None", ""]),
+    "Thank you.",
+  ];
+
+  const body = bodySections.join("\n");
+  return `mailto:${CREDIT_TEAM_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 
 export function GlobalCartWidget() {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -113,44 +194,17 @@ export function GlobalCartWidget() {
     setPictures((previousPictures) => previousPictures.filter((_, pictureIndex) => pictureIndex !== index));
   }
 
-  async function fileToBase64(file: File) {
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          const [, base64 = ""] = reader.result.split(",");
-          resolve(base64);
-          return;
-        }
-        reject(new Error("Unable to read image file."));
-      };
-      reader.onerror = () => {
-        reject(new Error("Unable to read image file."));
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function buildAttachments() {
-    const attachments: AttachmentPayload[] = [];
-
-    for (const picture of pictures) {
-      if (picture.size > 5 * 1024 * 1024) {
-        throw new Error(`Photo ${picture.name} exceeds 5MB limit.`);
-      }
-
-      attachments.push({
-        filename: picture.name,
-        contentType: picture.type || "application/octet-stream",
-        base64Data: await fileToBase64(picture),
-      });
+  function sendCreditRequestEmail() {
+    if (cartRows.length === 0 || isSending) {
+      return;
     }
 
-    return attachments;
-  }
+    const hasMissingRequiredItemData = cartRows.some(
+      (item) => !item.customer_code || !item.invoice_no || !item.item_no || !item.item_descp,
+    );
 
-  async function sendCreditRequestEmail() {
-    if (items.length === 0 || isSending) {
+    if (hasMissingRequiredItemData) {
+      setSendError("Unable to prepare draft. Some cart fields are missing required values.");
       return;
     }
 
@@ -159,29 +213,17 @@ export function GlobalCartWidget() {
     setSendSuccessMessage(null);
 
     try {
-      const attachments = await buildAttachments();
-
-      const response = await fetch("/api/credit-request/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          items: cartRows,
-          attachments,
-        }),
+      const mailtoHref = buildMailtoDraft({
+        cartRows,
+        pictures,
       });
 
-      const payload = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to send credit request email.");
-      }
-
-      setSendSuccessMessage("Credit request email sent successfully to credit@turkanafood.com.");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to send credit request email.";
-      setSendError(message);
+      window.location.href = mailtoHref;
+      setSendSuccessMessage(
+        "Email draft opened in your default mail client. Review and send to credit@turkanafood.com.",
+      );
+    } catch {
+      setSendError("Failed to prepare the email draft.");
     } finally {
       setIsSending(false);
     }
@@ -242,7 +284,7 @@ export function GlobalCartWidget() {
                     disabled={items.length === 0 || isSending}
                     className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isSending ? "Sending..." : "Send Credit Request"}
+                    {isSending ? "Preparing Draft..." : "Send Credit Request"}
                   </button>
                   <button
                     type="button"
@@ -325,9 +367,9 @@ export function GlobalCartWidget() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">Photo Attachments</p>
+                    <p className="text-sm font-semibold text-slate-800">Photo References</p>
                     <p className="text-xs text-slate-500">
-                      Upload photo evidence (max 5MB per file). Files will be included as email attachments.
+                      Upload photo evidence. References will be listed in the email draft body.
                     </p>
                   </div>
                   <input

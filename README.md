@@ -14,16 +14,11 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 This app requires Supabase and authentication variables used by existing flows.
 
-For the credit request email delivery flow, configure the following server-side variables in local `.env` and Vercel project settings:
-
-- `RESEND_API_KEY` - API key for your Resend account.
-- `CREDIT_REQUEST_FROM_EMAIL` - Verified sender (for example `Credit Request <no-reply@yourdomain.com>`).
-
-The credit request email recipient is fixed to `credit@turkanafood.com` in the server route.
+The credit request flow uses a client-side `mailto:` draft and does not require provider-specific email credentials.
 
 ## Credit Request Email Flow
 
-- Cart items are reviewed in the Cart modal and sent via `POST /api/credit-request/send`.
-- Email HTML is generated server-side with a business table layout and summary fields.
-- Uploaded cart photos are attached to the email as file attachments.
-- Sensitive keys are not exposed to the browser.
+- Cart items are reviewed in the Cart modal and used to construct a `mailto:` draft.
+- The draft subject and body are generated dynamically from current cart data.
+- Uploaded cart photos are listed as readable references in the message body (not attached files).
+- The recipient is fixed to `credit@turkanafood.com`.
