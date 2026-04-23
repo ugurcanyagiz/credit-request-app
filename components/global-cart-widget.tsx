@@ -41,20 +41,6 @@ export function GlobalCartWidget() {
     return [...regularItems, ...noteItems];
   }, [items]);
 
-  const totalAmount = useMemo(
-    () => items.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0),
-    [items],
-  );
-
-  const uniqueCustomers = useMemo(
-    () => [...new Set(cartRows.map((item) => item.customer_code))],
-    [cartRows],
-  );
-
-  const uniqueInvoices = useMemo(
-    () => [...new Set(cartRows.map((item) => item.invoice_no))],
-    [cartRows],
-  );
 
   const picturePreviews = useMemo(
     () =>
@@ -218,7 +204,7 @@ export function GlobalCartWidget() {
 
       {isOpen ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 md:p-8">
-          <div className="mx-auto w-full max-w-7xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="mx-auto max-h-[calc(100vh-1.5rem)] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="border-b border-slate-200 px-6 py-5 md:px-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
@@ -246,22 +232,6 @@ export function GlobalCartWidget() {
             </div>
 
             <div className="space-y-6 px-6 py-6 md:px-8">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Customer Information</p>
-                  <p className="mt-2 text-sm text-slate-700">{uniqueCustomers.join(", ") || "-"}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoice Information</p>
-                  <p className="mt-2 text-sm text-slate-700">{uniqueInvoices.join(", ") || "-"}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Credit Summary</p>
-                  <p className="mt-2 text-sm text-slate-700">
-                    Rows: <strong>{cartRows.length}</strong> · Total: <strong>{totalAmount.toFixed(2)}</strong>
-                  </p>
-                </div>
-              </div>
 
               {items.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
@@ -316,9 +286,6 @@ export function GlobalCartWidget() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-800">Photo Evidence</p>
-                    <p className="text-xs text-slate-500">
-                      Upload photo evidence. Files will be uploaded to Supabase Storage and rendered with hosted image URLs in the HTML draft.
-                    </p>
                   </div>
                   <input
                     ref={fileInputRef}
