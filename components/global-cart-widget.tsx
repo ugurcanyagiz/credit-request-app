@@ -4,108 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Image from "next/image";
 
-type CartItem = {
-  id: string;
-  customer_code: string;
-  invoice_no: string;
-  item_no: string;
-  item_descp: string;
-  quantity: number;
-  sales_amount: number;
-  piece_price: number;
-  sales_batch_number: string | null;
-  sales_lot_no: string | null;
-  credit_type: "case" | "piece";
-  credit_amount: number;
-  created_at: string;
+import type { CreditRequestCartItem } from "@/lib/credit-request-email";
+
+type CartItem = CreditRequestCartItem;
+
+type DraftResponse = {
+  draft: {
+    subject: string;
+    html: string;
+    text: string;
+  };
+  photos: Array<{
+    fileName: string;
+    publicUrl: string;
+    storagePath: string;
+  }>;
 };
 
-const CREDIT_TEAM_EMAIL = "credit@turkanafood.com";
-
-function money(value: number) {
-  return Number.isFinite(value) ? value.toFixed(2) : "0.00";
-}
-
-function truncate(value: string, length: number) {
-  return value.length <= length ? value : `${value.slice(0, Math.max(0, length - 3))}...`;
-}
-
-function pad(value: string, width: number, align: "left" | "right" = "left") {
-  const text = truncate(value, width);
-  if (text.length >= width) {
-    return text;
-  }
-
-  return align === "right" ? text.padStart(width, " ") : text.padEnd(width, " ");
-}
-
-function formatUploadedPhotoReference(picture: File, index: number) {
-  const readableSizeInKb = (picture.size / 1024).toFixed(1);
-  const fileType = picture.type || "unknown-type";
-  return `Photo ${index + 1}: ${picture.name} (${fileType}, ${readableSizeInKb} KB)`;
-}
-
-function buildMailtoDraft({
-  cartRows,
-  pictures,
-}: {
-  cartRows: CartItem[];
-  pictures: File[];
-}) {
-  const nonNoteItems = cartRows.filter((item) => !item.item_descp.includes("Reason:"));
-  const uniqueCustomers = [...new Set(cartRows.map((item) => item.customer_code).filter(Boolean))];
-  const uniqueInvoices = [...new Set(cartRows.map((item) => item.invoice_no).filter(Boolean))];
-  const totalCreditAmount = cartRows.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0);
-
-  const subject = `Credit Request | Customer ${uniqueCustomers.join(", ") || "N/A"} | Invoice ${
-    uniqueInvoices.join(", ") || "N/A"
-  } | ${cartRows.length} Item(s)`;
-
-  const tableHeader = [
-    `${pad("Item No", 12)} ${pad("Description", 24)} ${pad("Qty", 6, "right")} ${pad("Sales Amt", 10, "right")} ${pad("Price", 10, "right")}`,
-    "------------------------------------------------------------",
-  ];
-
-  const tableRows = nonNoteItems.map((item) => {
-    return `${pad(item.item_no || "-", 12)} ${pad(item.item_descp || "-", 24)} ${pad(String(item.quantity ?? 0), 6, "right")} ${pad(
-      money(Number(item.sales_amount ?? 0)),
-      10,
-      "right",
-    )} ${pad(money(Number(item.piece_price ?? 0)), 10, "right")}`;
-  });
-
-  const noteRows = cartRows
-    .filter((item) => item.item_descp.includes("Reason:"))
-    .map((item) => item.item_descp.replace("Reason:", "").trim())
-    .filter(Boolean);
-
-  const photoLines = pictures.map((picture, index) => formatUploadedPhotoReference(picture, index));
-
-  const bodySections = [
-    "Hello Team,",
-    "",
-    "Please review the credit request details below.",
-    "",
-    `Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
-    `Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
-    `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
-    "",
-    "Selected Items:",
-    "------------------------------------------------------------",
-    ...tableHeader,
-    ...(tableRows.length > 0 ? tableRows : ["(No selected product rows found)"]),
-    "------------------------------------------------------------",
-    "",
-    ...(noteRows.length > 0 ? ["Notes:", ...noteRows.map((note, index) => `${index + 1}. ${note}`), ""] : []),
-    ...(photoLines.length > 0
-      ? ["Uploaded Photo References:", ...photoLines, "", "Please find the related photos above.", ""]
-      : ["Uploaded Photo References: None", ""]),
-    "Thank you.",
-  ];
-
-  const body = bodySections.join("\n");
-  return `mailto:${CREDIT_TEAM_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
 
 export function GlobalCartWidget() {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -115,6 +30,8 @@ export function GlobalCartWidget() {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccessMessage, setSendSuccessMessage] = useState<string | null>(null);
+  const [draftData, setDraftData] = useState<DraftResponse | null>(null);
+  const [copiedText, setCopiedText] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cartRows = useMemo(() => {
@@ -187,6 +104,8 @@ export function GlobalCartWidget() {
     setPictures((previousPictures) => [...previousPictures, ...files]);
     setSendError(null);
     setSendSuccessMessage(null);
+    setDraftData(null);
+    setCopiedText(false);
     event.target.value = "";
   }
 
@@ -194,7 +113,7 @@ export function GlobalCartWidget() {
     setPictures((previousPictures) => previousPictures.filter((_, pictureIndex) => pictureIndex !== index));
   }
 
-  function sendCreditRequestEmail() {
+  async function prepareCreditRequestDraft() {
     if (cartRows.length === 0 || isSending) {
       return;
     }
@@ -211,21 +130,50 @@ export function GlobalCartWidget() {
     setIsSending(true);
     setSendError(null);
     setSendSuccessMessage(null);
+    setDraftData(null);
+    setCopiedText(false);
 
     try {
-      const mailtoHref = buildMailtoDraft({
-        cartRows,
-        pictures,
+      const formData = new FormData();
+      formData.set("cartRows", JSON.stringify(cartRows));
+      pictures.forEach((picture) => {
+        formData.append("photos", picture);
       });
 
-      window.location.href = mailtoHref;
+      const response = await fetch("/api/cart/credit-request-draft", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json()) as DraftResponse & { error?: string };
+
+      if (!response.ok) {
+        setSendError(payload.error ?? "Failed to prepare draft.");
+        return;
+      }
+
+      setDraftData(payload);
       setSendSuccessMessage(
-        "Email draft opened in your default mail client. Review and send to credit@turkanafood.com.",
+        "Draft prepared with hosted image URLs. Copy and paste into your email provider (HTML-friendly editor recommended).",
       );
     } catch {
       setSendError("Failed to prepare the email draft.");
     } finally {
       setIsSending(false);
+    }
+  }
+
+  async function copyPlainTextDraft() {
+    if (!draftData?.draft.text) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(`Subject: ${draftData.draft.subject}\n\n${draftData.draft.text}`);
+      setCopiedText(true);
+    } catch {
+      setCopiedText(false);
+      setSendError("Unable to copy draft text to clipboard.");
     }
   }
 
@@ -280,11 +228,11 @@ export function GlobalCartWidget() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={sendCreditRequestEmail}
+                    onClick={() => void prepareCreditRequestDraft()}
                     disabled={items.length === 0 || isSending}
                     className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isSending ? "Preparing Draft..." : "Send Credit Request"}
+                    {isSending ? "Preparing Draft..." : "Prepare Hosted HTML Draft"}
                   </button>
                   <button
                     type="button"
@@ -367,9 +315,9 @@ export function GlobalCartWidget() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">Photo References</p>
+                    <p className="text-sm font-semibold text-slate-800">Photo Evidence</p>
                     <p className="text-xs text-slate-500">
-                      Upload photo evidence. References will be listed in the email draft body.
+                      Upload photo evidence. Files will be uploaded to Supabase Storage and rendered with hosted image URLs in the HTML draft.
                     </p>
                   </div>
                   <input
@@ -422,6 +370,30 @@ export function GlobalCartWidget() {
                 </div>
               </div>
 
+              {draftData ? (
+                <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/30 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-sm font-semibold text-slate-900">HTML Draft Preview</h4>
+                    <button
+                      type="button"
+                      onClick={() => void copyPlainTextDraft()}
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                    >
+                      {copiedText ? "Copied" : "Copy Plain Text"}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    Subject: <strong>{draftData.draft.subject}</strong>
+                  </p>
+                  <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-200 bg-white p-3">
+                    <div dangerouslySetInnerHTML={{ __html: draftData.draft.html }} />
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    Uploaded photos are hosted and included as real URLs in the HTML above.
+                  </p>
+                </section>
+              ) : null}
+
               {sendError ? (
                 <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{sendError}</p>
               ) : null}
@@ -430,6 +402,9 @@ export function GlobalCartWidget() {
                   {sendSuccessMessage}
                 </p>
               ) : null}
+              <p className="text-xs text-slate-500">
+                Recipient remains <strong>credit@turkanafood.com</strong>. This flow prepares production-safe HTML content with hosted image links.
+              </p>
             </div>
           </div>
         </div>
