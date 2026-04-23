@@ -10,6 +10,13 @@ const PHOTO_BUCKET = process.env.SUPABASE_CART_PHOTOS_BUCKET || "credit-request-
 const ACCEPTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_FILES = 8;
+const CART_PHOTO_FOLDER = "cart-photos";
+
+type ExistingPhotoRef = {
+  fileName: string;
+  publicUrl: string;
+  storagePath: string;
+};
 
 async function resolveUserId(session: Session): Promise<string | null> {
   const userId = session.user?.id;
@@ -75,13 +82,55 @@ export async function POST(request: Request) {
   }
 
   const cartRows = cartRowsCandidate as CreditRequestCartItem[];
+  const existingPhotosRaw = formData.get("photoRefs");
+  let existingPhotos: ExistingPhotoRef[] = [];
+
+  if (typeof existingPhotosRaw === "string" && existingPhotosRaw.trim().length > 0) {
+    let existingPhotosCandidate: unknown;
+    try {
+      existingPhotosCandidate = JSON.parse(existingPhotosRaw) as unknown;
+    } catch {
+      return Response.json({ error: "Invalid photoRefs JSON" }, { status: 400 });
+    }
+
+    if (!Array.isArray(existingPhotosCandidate)) {
+      return Response.json({ error: "Invalid photoRefs payload" }, { status: 400 });
+    }
+
+    const userPrefix = `${userId}/${CART_PHOTO_FOLDER}/`;
+    const parsedPhotos: ExistingPhotoRef[] = [];
+
+    for (const candidate of existingPhotosCandidate) {
+      if (!candidate || typeof candidate !== "object") {
+        return Response.json({ error: "Invalid photoRefs payload" }, { status: 400 });
+      }
+
+      const value = candidate as Partial<ExistingPhotoRef>;
+      if (
+        typeof value.fileName !== "string" ||
+        typeof value.publicUrl !== "string" ||
+        typeof value.storagePath !== "string" ||
+        !value.storagePath.startsWith(userPrefix)
+      ) {
+        return Response.json({ error: "Invalid photoRefs payload" }, { status: 400 });
+      }
+
+      parsedPhotos.push({
+        fileName: value.fileName,
+        publicUrl: value.publicUrl,
+        storagePath: value.storagePath,
+      });
+    }
+
+    existingPhotos = parsedPhotos;
+  }
 
   const imageFiles = formData
     .getAll("photos")
     .filter((value): value is File => value instanceof File)
     .filter((file) => file.size > 0);
 
-  if (imageFiles.length > MAX_FILES) {
+  if (imageFiles.length + existingPhotos.length > MAX_FILES) {
     return Response.json({ error: `Too many files. Maximum is ${MAX_FILES}.` }, { status: 400 });
   }
 
@@ -89,7 +138,7 @@ export async function POST(request: Request) {
   const timestampFolder = new Date().toISOString().slice(0, 10);
   const uploadPrefix = `${userId}/${timestampFolder}`;
 
-  const uploadedPhotos: Array<{ fileName: string; publicUrl: string; storagePath: string }> = [];
+  const uploadedPhotos: Array<{ fileName: string; publicUrl: string; storagePath: string }> = [...existingPhotos];
 
   for (const file of imageFiles) {
     if (!ACCEPTED_IMAGE_MIME_TYPES.has(file.type)) {
