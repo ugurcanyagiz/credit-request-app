@@ -40,7 +40,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
   const [caseCount, setCaseCount] = useState<string>("");
   const [piecesPerCase, setPiecesPerCase] = useState<string>("");
   const [requestedPieces, setRequestedPieces] = useState<string>("");
-  const [selectedReasons, setSelectedReasons] = useState<ReasonOption[]>([]);
+  const [selectedReason, setSelectedReason] = useState<ReasonOption | null>(null);
   const [otherReason, setOtherReason] = useState("");
   const [isReasonDropdownOpen, setIsReasonDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,7 +94,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
     setCaseCount("");
     setPiecesPerCase("");
     setRequestedPieces("");
-    setSelectedReasons([]);
+    setSelectedReason(null);
     setOtherReason("");
     setIsReasonDropdownOpen(false);
     setSubmitError(null);
@@ -109,14 +109,14 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
       return;
     }
 
-    if (selectedReasons.length === 0) {
+    if (!selectedReason) {
       setSubmitError("Please select at least one reason.");
       return;
     }
 
     const resolvedReasons: string[] = [
-      ...selectedReasons.filter((reason) => reason !== "Other"),
-      ...(selectedReasons.includes("Other") && otherReason.trim().length > 0 ? [otherReason.trim()] : []),
+      ...(selectedReason !== "Other" ? [selectedReason] : []),
+      ...(selectedReason === "Other" && otherReason.trim().length > 0 ? [otherReason.trim()] : []),
     ];
 
     if (resolvedReasons.length === 0) {
@@ -272,10 +272,10 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
                 <button
                   type="button"
                   onClick={() => setIsReasonDropdownOpen((previous) => !previous)}
-                  className="flex w-full items-center justify-between rounded-md border border-zinc-300 px-3 py-2 text-left text-sm"
+                    className="flex w-full items-center justify-between rounded-md border border-zinc-300 px-3 py-2 text-left text-sm"
                 >
                   <span className="truncate">
-                    {selectedReasons.length > 0 ? selectedReasons.join(", ") : "Select reason(s)"}
+                    {selectedReason ?? "Select reason"}
                   </span>
                   <span className="ml-3 text-xs text-zinc-500">{isReasonDropdownOpen ? "▲" : "▼"}</span>
                 </button>
@@ -284,24 +284,21 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
                   <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white p-2 shadow-lg">
                     <div className="grid gap-2 text-sm">
                       {REASON_OPTIONS.map((option) => {
-                        const checked = selectedReasons.includes(option);
+                        const checked = selectedReason === option;
                         return (
                           <label key={option} className="inline-flex items-center gap-2">
                             <input
-                              type="checkbox"
+                              type="radio"
+                              name="credit-request-reason"
                               checked={checked}
                               onChange={(event) => {
                                 if (event.target.checked) {
-                                  setSelectedReasons((previousReasons) => [...previousReasons, option]);
+                                  setSelectedReason(option);
+                                  setIsReasonDropdownOpen(false);
+                                  if (option !== "Other") {
+                                    setOtherReason("");
+                                  }
                                   return;
-                                }
-
-                                setSelectedReasons((previousReasons) =>
-                                  previousReasons.filter((reason) => reason !== option),
-                                );
-
-                                if (option === "Other") {
-                                  setOtherReason("");
                                 }
                               }}
                             />
@@ -314,7 +311,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
                 ) : null}
               </div>
 
-              {selectedReasons.includes("Other") ? (
+              {selectedReason === "Other" ? (
                 <label className="mt-3 block text-sm">
                   <span className="mb-1 block text-zinc-700">Other reason</span>
                   <input
