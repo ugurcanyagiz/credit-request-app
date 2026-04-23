@@ -26,6 +26,7 @@ type CartPhoto = {
   publicUrl: string;
   storagePath: string;
   createdAt?: string;
+  previewUrl?: string;
 };
 
 export function GlobalCartWidget() {
@@ -370,7 +371,7 @@ export function GlobalCartWidget() {
                             ✕
                           </button>
                           <Image
-                            src={picture.publicUrl}
+                            src={picture.previewUrl ?? picture.publicUrl}
                             alt={picture.fileName}
                             width={96}
                             height={96}

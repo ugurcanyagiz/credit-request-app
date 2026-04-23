@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { buildSupabasePublicObjectUrl } from "@/lib/supabase-storage-url";
 import type { Session } from "next-auth";
 
 const PHOTO_BUCKET = process.env.SUPABASE_CART_PHOTOS_BUCKET || "credit-request-cart-photos";
@@ -14,6 +15,7 @@ const MAX_FILES_PER_UPLOAD = 8;
 type PhotoResponse = {
   fileName: string;
   publicUrl: string;
+  previewUrl: string;
   storagePath: string;
   createdAt: string;
 };
@@ -24,13 +26,12 @@ async function resolveUserId(session: Session): Promise<string | null> {
 }
 
 function toPhotoResponse(storagePath: string, createdAt: string): PhotoResponse {
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data } = supabaseAdmin.storage.from(PHOTO_BUCKET).getPublicUrl(storagePath);
   const fileName = storagePath.split("/").at(-1) ?? storagePath;
 
   return {
     fileName,
-    publicUrl: data.publicUrl,
+    publicUrl: buildSupabasePublicObjectUrl(PHOTO_BUCKET, storagePath),
+    previewUrl: `/api/cart/photos/file?storagePath=${encodeURIComponent(storagePath)}`,
     storagePath,
     createdAt,
   };
@@ -112,7 +113,8 @@ export async function POST(request: Request) {
 
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const createdAt = new Date().toISOString();
-    const storagePath = `${folder}/${createdAt}-${randomUUID()}-${sanitizedName}`;
+    const safeTimestamp = createdAt.replace(/[:.]/g, "-");
+    const storagePath = `${folder}/${safeTimestamp}-${randomUUID()}-${sanitizedName}`;
     const arrayBuffer = await file.arrayBuffer();
 
     const { error: uploadError } = await supabaseAdmin.storage

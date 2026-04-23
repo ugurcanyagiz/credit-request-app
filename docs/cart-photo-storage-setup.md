@@ -62,6 +62,7 @@ Already used by current server-side Supabase access:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_PUBLIC_URL` (recommended when your server uses an internal Supabase URL; this must be browser-reachable and is used for email/public image links)
 
 New optional override (defaults to `credit-request-cart-photos`):
 

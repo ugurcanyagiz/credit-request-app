@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { buildCreditRequestDraft, type CreditRequestCartItem } from "@/lib/credit-request-email";
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { buildSupabasePublicObjectUrl } from "@/lib/supabase-storage-url";
 import type { Session } from "next-auth";
 
 const PHOTO_BUCKET = process.env.SUPABASE_CART_PHOTOS_BUCKET || "credit-request-cart-photos";
@@ -150,7 +151,8 @@ export async function POST(request: Request) {
     }
 
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const storagePath = `${uploadPrefix}/${randomUUID()}-${sanitizedName}`;
+    const safeTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const storagePath = `${uploadPrefix}/${safeTimestamp}-${randomUUID()}-${sanitizedName}`;
     const arrayBuffer = await file.arrayBuffer();
 
     const { error: uploadError } = await supabaseAdmin.storage
@@ -168,11 +170,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data } = supabaseAdmin.storage.from(PHOTO_BUCKET).getPublicUrl(storagePath);
-
     uploadedPhotos.push({
       fileName: file.name,
-      publicUrl: data.publicUrl,
+      publicUrl: buildSupabasePublicObjectUrl(PHOTO_BUCKET, storagePath),
       storagePath,
     });
   }
