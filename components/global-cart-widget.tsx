@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
+import Image from "next/image";
 
 type CartItem = {
   id: string;
@@ -25,6 +26,7 @@ export function GlobalCartWidget() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccessMessage, setSendSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const cartRows = useMemo(() => {
     const isManualNote = (item: CartItem) => item.item_descp.includes("Reason:");
@@ -36,6 +38,15 @@ export function GlobalCartWidget() {
   const totalAmount = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0),
     [items],
+  );
+  const picturePreviews = useMemo(
+    () =>
+      pictures.map((picture) => ({
+        key: `${picture.name}-${picture.lastModified}-${picture.size}`,
+        name: picture.name,
+        url: URL.createObjectURL(picture),
+      })),
+    [pictures],
   );
 
   const loadCart = useCallback(async () => {
@@ -71,11 +82,20 @@ export function GlobalCartWidget() {
     fileInputRef.current?.click();
   }
 
+  function onTakePhoto() {
+    cameraInputRef.current?.click();
+  }
+
   function onPicturesSelected(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-    setPictures(files);
+    setPictures((previousPictures) => [...previousPictures, ...files]);
     setSendError(null);
     setSendSuccessMessage(null);
+    event.target.value = "";
+  }
+
+  function removePicture(index: number) {
+    setPictures((previousPictures) => previousPictures.filter((_, pictureIndex) => pictureIndex !== index));
   }
 
   async function sendCreditRequestEmail() {
@@ -177,6 +197,14 @@ export function GlobalCartWidget() {
     };
   }, [loadCart]);
 
+  useEffect(() => {
+    return () => {
+      picturePreviews.forEach((picturePreview) => {
+        URL.revokeObjectURL(picturePreview.url);
+      });
+    };
+  }, [picturePreviews]);
+
   if (!authorized) {
     return null;
   }
@@ -263,7 +291,7 @@ export function GlobalCartWidget() {
                   </table>
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-3">
+                <div className="mt-6 flex flex-col items-center gap-3">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -272,18 +300,79 @@ export function GlobalCartWidget() {
                     onChange={onPicturesSelected}
                     className="hidden"
                   />
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={onPicturesSelected}
+                    className="hidden"
+                  />
                   <button
                     type="button"
                     onClick={onPickPictures}
-                    className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50"
+                    className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-300 text-3xl hover:bg-zinc-50"
+                    aria-label="Add Pictures"
+                    title="Add Pictures"
                   >
-                    Add Pictures
+                    📷
                   </button>
-                  <p className="text-xs text-zinc-600">
-                    {pictures.length > 0
-                      ? `${pictures.length} picture(s) selected`
-                      : "No picture selected"}
-                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onPickPictures}
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50"
+                    >
+                      Add Pictures
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onTakePhoto}
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50"
+                    >
+                      Take Photo
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPictures([])}
+                    disabled={pictures.length === 0}
+                    className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Clear All
+                  </button>
+
+                  <div className="w-full rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                    {pictures.length > 0 ? (
+                      <div className="flex flex-wrap gap-3">
+                        {picturePreviews.map((picturePreview, index) => (
+                          <div
+                            key={`${picturePreview.key}-${index}`}
+                            className="relative h-20 w-20 overflow-hidden rounded-md border border-zinc-300 bg-white"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => removePicture(index)}
+                              className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
+                              aria-label={`Remove ${picturePreview.name}`}
+                            >
+                              ✕
+                            </button>
+                            <Image
+                              src={picturePreview.url}
+                              alt={picturePreview.name}
+                              width={80}
+                              height={80}
+                              unoptimized
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-600">No picture selected</p>
+                    )}
+                  </div>
                 </div>
 
                 {sendError ? <p className="mt-2 text-xs text-red-600">{sendError}</p> : null}
