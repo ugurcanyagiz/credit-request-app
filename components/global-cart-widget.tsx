@@ -102,17 +102,7 @@ export function GlobalCartWidget() {
     setSendError(null);
     setSendSuccessMessage(null);
 
-    const headers = [
-      "Customer Code",
-      "Invoice",
-      "Item",
-      "Description",
-      "Type",
-      "Amount",
-      "Batch No",
-      "Lot No",
-    ];
-
+    const headers = ["Customer Code", "Invoice", "Item", "Description", "Type", "Amount", "Batch No", "Lot No"];
     const rows = cartRows.map((item) => [
       item.customer_code,
       item.invoice_no,
@@ -124,37 +114,51 @@ export function GlobalCartWidget() {
       item.sales_lot_no ?? "-",
     ]);
 
-    const columnWidths = headers.map((header, index) =>
-      Math.max(header.length, ...rows.map((row) => String(row[index]).length)),
+    const columnWidths = headers.map((header, columnIndex) =>
+      Math.max(header.length, ...rows.map((row) => String(row[columnIndex]).length)),
     );
 
-    function formatTableRow(row: string[]) {
-      return `| ${row.map((cell, index) => String(cell).padEnd(columnWidths[index], " ")).join(" | ")} |`;
+    function centerCell(value: string, width: number) {
+      const content = String(value);
+      const remaining = Math.max(width - content.length, 0);
+      const left = Math.floor(remaining / 2);
+      const right = remaining - left;
+      return `${" ".repeat(left)}${content}${" ".repeat(right)}`;
     }
 
-    const tableDivider = `|-${columnWidths.map((width) => "-".repeat(width)).join("-|-")}-|`;
-    const formattedTable = [
-      formatTableRow(headers),
-      tableDivider,
-      ...rows.map((row) => formatTableRow(row)),
-    ];
+    function renderRow(row: string[], alignments: Array<"left" | "center" | "right">) {
+      const rowCells = row.map((cell, index) => {
+        const content = String(cell);
+        const width = columnWidths[index];
+        if (alignments[index] === "left") {
+          return content.padEnd(width, " ");
+        }
+        if (alignments[index] === "right") {
+          return content.padStart(width, " ");
+        }
+        return centerCell(content, width);
+      });
+      return `| ${rowCells.join(" | ")} |`;
+    }
 
-    const lines = [
-      "Credit Request",
-      "",
-      "Cart Details (Excel-ready professional table format):",
-      ...formattedTable,
-      "",
-      `Total Amount: ${totalAmount.toFixed(2)}`,
-    ];
+    function drawLine(left: string, middle: string, right: string) {
+      return `${left}${columnWidths.map((width) => "-".repeat(width + 2)).join(middle)}${right}`;
+    }
+
+    const topBorder = drawLine("+", "+", "+");
+    const middleBorder = drawLine("+", "+", "+");
+    const bottomBorder = drawLine("+", "+", "+");
+    const headerRow = renderRow(headers, ["center", "center", "center", "center", "center", "center", "center", "center"]);
+    const dataRows = rows.map((row) =>
+      renderRow(row, ["center", "center", "center", "left", "center", "right", "center", "center"]),
+    );
+    const totalLabel = "Total Amount";
+    const leftSpanWidth = columnWidths.slice(0, 5).reduce((sum, width) => sum + width, 0) + 3 * 4;
+    const totalRow = `| ${totalLabel.padEnd(leftSpanWidth, " ")} | ${String(totalAmount.toFixed(2)).padStart(columnWidths[5], " ")} | ${"-".padStart(columnWidths[6], " ")} | ${"-".padStart(columnWidths[7], " ")} |`;
+    const emailTableText = [topBorder, headerRow, middleBorder, ...dataRows, middleBorder, totalRow, bottomBorder].join("\n");
 
     try {
-      const body =
-        pictures.length > 0
-          ? `Dear Team,\n\nPlease find the credit request details below.\n\n${lines.join("\n")}\n\nSelected Pictures:\n${pictures.map((file) => `- ${file.name}`).join("\n")}`
-          : `Dear Team,\n\nPlease find the credit request details below.\n\n${lines.join("\n")}`;
-
-      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(body)}`;
+      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(emailTableText)}`;
       window.location.href = mailtoUrl;
 
       if (pictures.length > 0) {
