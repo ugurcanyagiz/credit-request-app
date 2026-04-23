@@ -39,8 +39,33 @@ function truncate(value: string, maxLength: number) {
   return `${value.slice(0, maxLength - 3)}...`;
 }
 
-function toReasonText(itemDescription: string) {
-  return itemDescription.replace("Reason:", "").trim();
+function isEmailStandaloneReasonRow(itemDescription: string) {
+  return itemDescription.trim().startsWith("Reason:");
+}
+
+function parseEmailReasonAndDescription(itemDescription: string) {
+  const normalizedDescription = itemDescription.trim();
+
+  if (normalizedDescription.startsWith("Reason:")) {
+    const reason = normalizedDescription.replace(/^Reason:/, "").trim();
+    return { description: "-", reason: reason.length > 0 ? reason : null };
+  }
+
+  const splitOnReason = normalizedDescription.split(/\s*\|\s*Reason:\s*/i);
+  if (splitOnReason.length > 1) {
+    const [descriptionPart, ...reasonParts] = splitOnReason;
+    const reason = reasonParts.join(" | ").trim();
+    return {
+      description: descriptionPart.trim() || "-",
+      reason: reason.length > 0 ? reason : null,
+    };
+  }
+
+  return { description: normalizedDescription || "-", reason: null };
+}
+
+function toEmailReasonRowKey(item: CreditRequestCartItem) {
+  return `${item.customer_code}::${item.invoice_no}::${item.item_no}`;
 }
 
 function isStandaloneReasonRow(itemDescription: string) {
@@ -92,28 +117,28 @@ export function buildCreditRequestDraftText({
   cartRows: CreditRequestCartItem[];
   uploadedPhotos: UploadedPhotoReference[];
 }) {
-  const nonNoteItems = cartRows.filter((item) => !isStandaloneReasonRow(item.item_descp));
+  const nonNoteItems = cartRows.filter((item) => !isEmailStandaloneReasonRow(item.item_descp));
   const reasonRowsByKey = new Map<string, string[]>();
 
   for (const item of cartRows) {
-    if (!isStandaloneReasonRow(item.item_descp)) {
+    if (!isEmailStandaloneReasonRow(item.item_descp)) {
       continue;
     }
 
-    const parsed = parseReasonAndDescription(item.item_descp);
+    const parsed = parseEmailReasonAndDescription(item.item_descp);
     if (!parsed.reason) {
       continue;
     }
 
-    const key = toReasonRowKey(item);
+    const key = toEmailReasonRowKey(item);
     const existing = reasonRowsByKey.get(key) ?? [];
     existing.push(parsed.reason);
     reasonRowsByKey.set(key, existing);
   }
 
   const displayRows = nonNoteItems.map((item) => {
-    const parsed = parseReasonAndDescription(item.item_descp);
-    const key = toReasonRowKey(item);
+    const parsed = parseEmailReasonAndDescription(item.item_descp);
+    const key = toEmailReasonRowKey(item);
     const queuedReason = reasonRowsByKey.get(key)?.shift() ?? null;
 
     return {
@@ -130,11 +155,6 @@ export function buildCreditRequestDraftText({
   const subject = `Credit Request - Customer ${uniqueCustomers.join(", ") || "N/A"} - Invoice ${
     uniqueInvoices.join(", ") || "N/A"
   } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
-
-  const noteRows = cartRows
-    .filter((item) => item.item_descp.includes("Reason:"))
-    .map((item) => toReasonText(item.item_descp))
-    .filter(Boolean);
 
   const rowWidths = [10, 28, 28, 3, 12, 11] as const;
   const headerRow = toTableRow(["Item No", "Description", "Reason", "Qty", "Sales Amount", "Piece Price"], [...rowWidths]);
@@ -171,7 +191,6 @@ export function buildCreditRequestDraftText({
         )
       : ["No selected product rows found."]),
     "",
-    ...(noteRows.length > 0 ? ["COMMENTS", ...noteRows.map((note, index) => `${index + 1}. ${note}`), ""] : []),
     ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
       ? [
           "PHOTO LINKS",
@@ -179,7 +198,6 @@ export function buildCreditRequestDraftText({
             .filter((photo) => Boolean(photo.publicUrl))
             .flatMap((photo, index) => [
               `Photo ${index + 1}:`,
-              ...(photo.fileName ? [`(${truncate(photo.fileName, 48)})`] : []),
               photo.publicUrl,
               "",
             ]),
