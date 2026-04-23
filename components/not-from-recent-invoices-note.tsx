@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type CreditType = "case" | "piece";
 
@@ -27,43 +27,92 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [itemOptions, setItemOptions] = useState<ItemLookupOption[]>([]);
   const [isItemLookupLoading, setIsItemLookupLoading] = useState(false);
-  const [showItemOptions, setShowItemOptions] = useState(false);
+  const [activeLookupField, setActiveLookupField] = useState<LookupSearchBy | null>(null);
+  const lookupAbortControllerRef = useRef<AbortController | null>(null);
+  const lookupDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function loadItemOptions(searchValue: string, searchBy: LookupSearchBy) {
+  useEffect(() => {
+    return () => {
+      if (lookupAbortControllerRef.current) {
+        lookupAbortControllerRef.current.abort();
+      }
+
+      if (lookupDebounceTimeoutRef.current) {
+        clearTimeout(lookupDebounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  function resetLookupState() {
+    setItemOptions([]);
+    setActiveLookupField(null);
+    setIsItemLookupLoading(false);
+  }
+
+  function loadItemOptions(searchValue: string, searchBy: LookupSearchBy) {
     const normalizedSearch = searchValue.trim();
     if (normalizedSearch.length < 2) {
-      setItemOptions([]);
-      setShowItemOptions(false);
+      if (lookupAbortControllerRef.current) {
+        lookupAbortControllerRef.current.abort();
+      }
+      if (lookupDebounceTimeoutRef.current) {
+        clearTimeout(lookupDebounceTimeoutRef.current);
+      }
+      resetLookupState();
       return;
     }
 
+    setActiveLookupField(searchBy);
     setIsItemLookupLoading(true);
-    const response = await fetch(
-      `/api/customers/${encodeURIComponent(customerCode)}/item-lookup?query=${encodeURIComponent(normalizedSearch)}&searchBy=${encodeURIComponent(searchBy)}`,
-    );
-    setIsItemLookupLoading(false);
 
-    if (!response.ok) {
-      setItemOptions([]);
-      setShowItemOptions(false);
-      return;
+    if (lookupAbortControllerRef.current) {
+      lookupAbortControllerRef.current.abort();
+    }
+    if (lookupDebounceTimeoutRef.current) {
+      clearTimeout(lookupDebounceTimeoutRef.current);
     }
 
-    const payload = (await response.json().catch(() => null)) as { items?: ItemLookupOption[] } | null;
-    const options = payload?.items ?? [];
-    setItemOptions(options);
-    setShowItemOptions(options.length > 0);
+    lookupDebounceTimeoutRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      lookupAbortControllerRef.current = controller;
+
+      const response = await fetch(
+        `/api/customers/${encodeURIComponent(customerCode)}/item-lookup?query=${encodeURIComponent(normalizedSearch)}&searchBy=${encodeURIComponent(searchBy)}`,
+        { signal: controller.signal },
+      ).catch(() => null);
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setIsItemLookupLoading(false);
+
+      if (!response?.ok) {
+        setItemOptions([]);
+        return;
+      }
+
+      const payload = (await response.json().catch(() => null)) as { items?: ItemLookupOption[] } | null;
+      const options = payload?.items ?? [];
+      setItemOptions(options);
+    }, 220);
+  }
+
+  function closeLookupDropdownWithDelay() {
+    setTimeout(() => {
+      setActiveLookupField(null);
+    }, 120);
   }
 
   function applyItemOption(option: ItemLookupOption) {
     setItemNo(option.item_no);
     setDescription(option.item_descp);
-    setItemOptions([]);
-    setShowItemOptions(false);
+    resetLookupState();
   }
 
   function openModal() {
     setSubmitError(null);
+    resetLookupState();
     setIsModalOpen(true);
   }
 
@@ -131,8 +180,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
     setCreditType("case");
     setAmount("");
     setReason("");
-    setItemOptions([]);
-    setShowItemOptions(false);
+    resetLookupState();
     window.dispatchEvent(new Event("cart-updated"));
   }
 
@@ -189,20 +237,16 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                     onChange={(event) => {
                       const value = event.target.value;
                       setItemNo(value);
-                      void loadItemOptions(value, "item_no");
+                      loadItemOptions(value, "item_no");
                     }}
-                    onFocus={() => setShowItemOptions(itemOptions.length > 0)}
-                    onBlur={() => {
-                      setTimeout(() => {
-                        setShowItemOptions(false);
-                      }, 120);
-                    }}
+                    onFocus={() => setActiveLookupField("item_no")}
+                    onBlur={closeLookupDropdownWithDelay}
                     className="w-full rounded-md border border-zinc-300 px-3 py-2"
                   />
-                  {showItemOptions ? (
+                  {activeLookupField === "item_no" && itemOptions.length > 0 ? (
                     <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white py-1 shadow-lg">
                       {itemOptions.map((option) => (
-                        <li key={option.item_no}>
+                        <li key={`${option.item_no}-${option.item_descp}`}>
                           <button
                             type="button"
                             onClick={() => applyItemOption(option)}
@@ -216,7 +260,9 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                     </ul>
                   ) : null}
                 </div>
-                {isItemLookupLoading ? <p className="mt-1 text-xs text-zinc-500">Searching items…</p> : null}
+                {isItemLookupLoading && activeLookupField === "item_no" ? (
+                  <p className="mt-1 text-xs text-zinc-500">Searching items…</p>
+                ) : null}
               </label>
 
               <label className="block">
@@ -228,20 +274,16 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                     onChange={(event) => {
                       const value = event.target.value;
                       setDescription(value);
-                      void loadItemOptions(value, "item_descp");
+                      loadItemOptions(value, "item_descp");
                     }}
-                    onFocus={() => setShowItemOptions(itemOptions.length > 0)}
-                    onBlur={() => {
-                      setTimeout(() => {
-                        setShowItemOptions(false);
-                      }, 120);
-                    }}
+                    onFocus={() => setActiveLookupField("item_descp")}
+                    onBlur={closeLookupDropdownWithDelay}
                     className="w-full rounded-md border border-zinc-300 px-3 py-2"
                   />
-                  {showItemOptions ? (
+                  {activeLookupField === "item_descp" && itemOptions.length > 0 ? (
                     <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white py-1 shadow-lg">
                       {itemOptions.map((option) => (
-                        <li key={`${option.item_no}-description`}>
+                        <li key={`${option.item_no}-${option.item_descp}-description`}>
                           <button
                             type="button"
                             onClick={() => applyItemOption(option)}
@@ -255,6 +297,9 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                     </ul>
                   ) : null}
                 </div>
+                {isItemLookupLoading && activeLookupField === "item_descp" ? (
+                  <p className="mt-1 text-xs text-zinc-500">Searching items…</p>
+                ) : null}
               </label>
 
               <label className="block">
