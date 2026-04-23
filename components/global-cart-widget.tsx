@@ -193,26 +193,8 @@ export function GlobalCartWidget() {
           : "";
 
       const emailHtmlWithPictures = `${emailHtml}${pictureBlocks}</body></html>`;
-
-      const emlContent = [
-        "To: credit@turkanafood.com",
-        "Subject: Credit Request",
-        "MIME-Version: 1.0",
-        "Content-Type: text/html; charset=UTF-8",
-        "",
-        emailHtmlWithPictures,
-      ].join("\r\n");
-
-      const blob = new Blob([emlContent], { type: "message/rfc822;charset=utf-8" });
-      const draftUrl = URL.createObjectURL(blob);
-      const draftLink = document.createElement("a");
-      draftLink.href = draftUrl;
-      draftLink.download = "credit-request-draft.eml";
-      document.body.appendChild(draftLink);
-      draftLink.click();
-      draftLink.remove();
-      URL.revokeObjectURL(draftUrl);
-
+      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(emailHtmlWithPictures)}`;
+      window.location.href = mailtoUrl;
       setSendSuccessMessage("Email draft generated.");
     } catch {
       setSendError("Failed to send credit request email.");
