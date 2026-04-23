@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type CreditType = "case" | "piece";
 
 type NotFromRecentInvoicesNoteProps = {
   customerCode: string;
 };
+
+type ItemLookupOption = {
+  item_no: string;
+  item_descp: string;
+};
+
+type LookupSearchBy = "item_no" | "item_descp";
 
 export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoicesNoteProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,9 +25,94 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
   const [reason, setReason] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemOptions, setItemOptions] = useState<ItemLookupOption[]>([]);
+  const [isItemLookupLoading, setIsItemLookupLoading] = useState(false);
+  const [activeLookupField, setActiveLookupField] = useState<LookupSearchBy | null>(null);
+  const lookupAbortControllerRef = useRef<AbortController | null>(null);
+  const lookupDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (lookupAbortControllerRef.current) {
+        lookupAbortControllerRef.current.abort();
+      }
+
+      if (lookupDebounceTimeoutRef.current) {
+        clearTimeout(lookupDebounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  function resetLookupState() {
+    setItemOptions([]);
+    setActiveLookupField(null);
+    setIsItemLookupLoading(false);
+  }
+
+  function loadItemOptions(searchValue: string, searchBy: LookupSearchBy) {
+    const normalizedSearch = searchValue.trim();
+    if (normalizedSearch.length < 2) {
+      if (lookupAbortControllerRef.current) {
+        lookupAbortControllerRef.current.abort();
+      }
+      if (lookupDebounceTimeoutRef.current) {
+        clearTimeout(lookupDebounceTimeoutRef.current);
+      }
+      resetLookupState();
+      return;
+    }
+
+    setActiveLookupField(searchBy);
+    setIsItemLookupLoading(true);
+
+    if (lookupAbortControllerRef.current) {
+      lookupAbortControllerRef.current.abort();
+    }
+    if (lookupDebounceTimeoutRef.current) {
+      clearTimeout(lookupDebounceTimeoutRef.current);
+    }
+
+    lookupDebounceTimeoutRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      lookupAbortControllerRef.current = controller;
+
+      const response = await fetch(
+        `/api/customers/${encodeURIComponent(customerCode)}/item-lookup?query=${encodeURIComponent(normalizedSearch)}&searchBy=${encodeURIComponent(searchBy)}`,
+        { signal: controller.signal },
+      ).catch(() => null);
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setIsItemLookupLoading(false);
+
+      if (!response?.ok) {
+        setItemOptions([]);
+        return;
+      }
+
+      const payload = (await response.json().catch(() => null)) as { items?: ItemLookupOption[] } | null;
+      const options = payload?.items ?? [];
+      setItemOptions(options);
+    }, 220);
+  }
+
+  function closeLookupDropdownWithDelay() {
+    setTimeout(() => {
+      setActiveLookupField(null);
+    }, 120);
+  }
+
+  function applyItemOption(option: ItemLookupOption) {
+    setItemNo(option.item_no);
+    setDescription(option.item_descp);
+    resetLookupState();
+  }
 
   function openModal() {
     setSubmitError(null);
+    resetLookupState();
     setIsModalOpen(true);
   }
 
@@ -88,6 +180,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
     setCreditType("case");
     setAmount("");
     setReason("");
+    resetLookupState();
     window.dispatchEvent(new Event("cart-updated"));
   }
 
@@ -137,22 +230,76 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
 
               <label className="block">
                 <span className="mb-1 block text-zinc-700">Item No</span>
-                <input
-                  type="text"
-                  value={itemNo}
-                  onChange={(event) => setItemNo(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={itemNo}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setItemNo(value);
+                      loadItemOptions(value, "item_no");
+                    }}
+                    onFocus={() => setActiveLookupField("item_no")}
+                    onBlur={closeLookupDropdownWithDelay}
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  />
+                  {activeLookupField === "item_no" && itemOptions.length > 0 ? (
+                    <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white py-1 shadow-lg">
+                      {itemOptions.map((option) => (
+                        <li key={`${option.item_no}-${option.item_descp}`}>
+                          <button
+                            type="button"
+                            onClick={() => applyItemOption(option)}
+                            className="block w-full px-3 py-2 text-left hover:bg-zinc-50"
+                          >
+                            <p className="font-medium text-zinc-800">{option.item_no}</p>
+                            <p className="text-xs text-zinc-600">{option.item_descp}</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+                {isItemLookupLoading && activeLookupField === "item_no" ? (
+                  <p className="mt-1 text-xs text-zinc-500">Searching items…</p>
+                ) : null}
               </label>
 
               <label className="block">
                 <span className="mb-1 block text-zinc-700">Description</span>
-                <input
-                  type="text"
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={description}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setDescription(value);
+                      loadItemOptions(value, "item_descp");
+                    }}
+                    onFocus={() => setActiveLookupField("item_descp")}
+                    onBlur={closeLookupDropdownWithDelay}
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  />
+                  {activeLookupField === "item_descp" && itemOptions.length > 0 ? (
+                    <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white py-1 shadow-lg">
+                      {itemOptions.map((option) => (
+                        <li key={`${option.item_no}-${option.item_descp}-description`}>
+                          <button
+                            type="button"
+                            onClick={() => applyItemOption(option)}
+                            className="block w-full px-3 py-2 text-left hover:bg-zinc-50"
+                          >
+                            <p className="font-medium text-zinc-800">{option.item_no}</p>
+                            <p className="text-xs text-zinc-600">{option.item_descp}</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+                {isItemLookupLoading && activeLookupField === "item_descp" ? (
+                  <p className="mt-1 text-xs text-zinc-500">Searching items…</p>
+                ) : null}
               </label>
 
               <label className="block">
