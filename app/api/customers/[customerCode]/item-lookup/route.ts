@@ -18,20 +18,27 @@ export async function GET(request: Request, context: RouteContext<"/api/customer
 
   const { customerCode: rawCustomerCode } = await context.params;
   const customerCode = decodeURIComponent(rawCustomerCode);
-  const query = new URL(request.url).searchParams.get("query")?.trim() ?? "";
+  const searchParams = new URL(request.url).searchParams;
+  const query = searchParams.get("query")?.trim() ?? "";
+  const searchBy = searchParams.get("searchBy");
 
   if (query.length < 2) {
     return Response.json({ items: [] });
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  const baseQuery = supabaseAdmin
     .from("credit_rows")
     .select("item_no,item_descp")
     .eq("salesperson", salespersonName)
-    .eq("customer_code", customerCode)
-    .ilike("item_no", `%${query}%`)
-    .limit(8);
+    .eq("customer_code", customerCode);
+  const filteredQuery =
+    searchBy === "item_descp"
+      ? baseQuery.ilike("item_descp", `%${query}%`)
+      : searchBy === "item_no"
+        ? baseQuery.ilike("item_no", `%${query}%`)
+        : baseQuery.or(`item_no.ilike.%${query}%,item_descp.ilike.%${query}%`);
+  const { data, error } = await filteredQuery.limit(8);
 
   if (error) {
     console.error("Failed to fetch item lookup data", error);

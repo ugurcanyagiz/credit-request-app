@@ -13,6 +13,8 @@ type ItemLookupOption = {
   item_descp: string;
 };
 
+type LookupSearchBy = "item_no" | "item_descp";
+
 export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoicesNoteProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -27,7 +29,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
   const [isItemLookupLoading, setIsItemLookupLoading] = useState(false);
   const [showItemOptions, setShowItemOptions] = useState(false);
 
-  async function loadItemOptions(searchValue: string) {
+  async function loadItemOptions(searchValue: string, searchBy: LookupSearchBy) {
     const normalizedSearch = searchValue.trim();
     if (normalizedSearch.length < 2) {
       setItemOptions([]);
@@ -37,7 +39,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
 
     setIsItemLookupLoading(true);
     const response = await fetch(
-      `/api/customers/${encodeURIComponent(customerCode)}/item-lookup?query=${encodeURIComponent(normalizedSearch)}`,
+      `/api/customers/${encodeURIComponent(customerCode)}/item-lookup?query=${encodeURIComponent(normalizedSearch)}&searchBy=${encodeURIComponent(searchBy)}`,
     );
     setIsItemLookupLoading(false);
 
@@ -187,7 +189,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                     onChange={(event) => {
                       const value = event.target.value;
                       setItemNo(value);
-                      void loadItemOptions(value);
+                      void loadItemOptions(value, "item_no");
                     }}
                     onFocus={() => setShowItemOptions(itemOptions.length > 0)}
                     onBlur={() => {
@@ -214,17 +216,45 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                     </ul>
                   ) : null}
                 </div>
-                {isItemLookupLoading ? <p className="mt-1 text-xs text-zinc-500">Searching item numbers…</p> : null}
+                {isItemLookupLoading ? <p className="mt-1 text-xs text-zinc-500">Searching items…</p> : null}
               </label>
 
               <label className="block">
                 <span className="mb-1 block text-zinc-700">Description</span>
-                <input
-                  type="text"
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={description}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setDescription(value);
+                      void loadItemOptions(value, "item_descp");
+                    }}
+                    onFocus={() => setShowItemOptions(itemOptions.length > 0)}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setShowItemOptions(false);
+                      }, 120);
+                    }}
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  />
+                  {showItemOptions ? (
+                    <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white py-1 shadow-lg">
+                      {itemOptions.map((option) => (
+                        <li key={`${option.item_no}-description`}>
+                          <button
+                            type="button"
+                            onClick={() => applyItemOption(option)}
+                            className="block w-full px-3 py-2 text-left hover:bg-zinc-50"
+                          >
+                            <p className="font-medium text-zinc-800">{option.item_no}</p>
+                            <p className="text-xs text-zinc-600">{option.item_descp}</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
               </label>
 
               <label className="block">
