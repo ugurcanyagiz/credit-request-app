@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
 
 type Customer = {
@@ -12,6 +12,7 @@ type Customer = {
 export function DashboardCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -42,6 +43,24 @@ export function DashboardCustomers() {
     };
   }, []);
 
+  const filteredCustomers = useMemo(() => {
+    const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+
+    if (!normalizedSearchTerm) {
+      return customers;
+    }
+
+    return customers.filter((customer) => {
+      const customerCode = customer.customer_code.toLocaleLowerCase();
+      const customerName = customer.customer_name.toLocaleLowerCase();
+
+      return (
+        customerCode.includes(normalizedSearchTerm) ||
+        customerName.includes(normalizedSearchTerm)
+      );
+    });
+  }, [customers, searchTerm]);
+
   return (
     <section className="mt-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -57,8 +76,22 @@ export function DashboardCustomers() {
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
+      <div>
+        <label htmlFor="customer-search" className="mb-1 block text-sm font-medium text-zinc-700">
+          Search customer
+        </label>
+        <input
+          id="customer-search"
+          type="search"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Search by customer code or name..."
+          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+        />
+      </div>
+
       <ul className="space-y-2">
-        {customers.map((customer) => (
+        {filteredCustomers.map((customer) => (
           <li
             key={customer.customer_code}
             className="rounded-md border border-zinc-200 text-sm"
@@ -73,6 +106,10 @@ export function DashboardCustomers() {
           </li>
         ))}
       </ul>
+
+      {!error && filteredCustomers.length === 0 ? (
+        <p className="text-sm text-zinc-600">No customers found for this search.</p>
+      ) : null}
     </section>
   );
 }
