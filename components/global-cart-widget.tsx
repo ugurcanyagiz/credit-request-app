@@ -161,6 +161,14 @@ export function GlobalCartWidget() {
       const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(body)}`;
       window.location.href = mailtoUrl;
 
+      const body =
+        pictures.length > 0
+          ? `Dear Team,\n\nPlease find the credit request details below.\n\nThe formatted table has been copied to your clipboard. Paste it into the email body (Ctrl/Cmd + V).\n\nSelected Pictures:\n${pictures.map((file) => `- ${file.name}`).join("\n")}`
+          : "Dear Team,\n\nPlease find the credit request details below.\n\nThe formatted table has been copied to your clipboard. Paste it into the email body (Ctrl/Cmd + V).";
+
+      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoUrl;
+
       if (pictures.length > 0) {
         setSendError("Please attach selected pictures manually in your email client.");
         return;
