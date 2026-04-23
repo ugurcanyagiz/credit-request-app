@@ -103,70 +103,87 @@ export function GlobalCartWidget() {
     setSendSuccessMessage(null);
 
     const headers = ["Customer Code", "Invoice", "Item", "Description", "Type", "Amount", "Batch No", "Lot No"];
-    const rows = cartRows.map((item) => [
-      item.customer_code,
-      item.invoice_no,
-      item.item_no,
-      item.item_descp,
-      item.credit_type,
-      Number(item.credit_amount).toFixed(2),
-      item.sales_batch_number ?? "-",
-      item.sales_lot_no ?? "-",
-    ]);
+    const rows = cartRows.map((item) => ({
+      customerCode: item.customer_code,
+      invoiceNo: item.invoice_no,
+      itemNo: item.item_no,
+      description: item.item_descp,
+      type: item.credit_type,
+      amount: Number(item.credit_amount).toFixed(2),
+      batchNo: item.sales_batch_number ?? "-",
+      lotNo: item.sales_lot_no ?? "-",
+    }));
 
-    const columnWidths = headers.map((header, columnIndex) =>
-      Math.max(header.length, ...rows.map((row) => String(row[columnIndex]).length)),
-    );
+    const escapeHtml = (value: string) =>
+      value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
 
-    function centerCell(value: string, width: number) {
-      const content = String(value);
-      const remaining = Math.max(width - content.length, 0);
-      const left = Math.floor(remaining / 2);
-      const right = remaining - left;
-      return `${" ".repeat(left)}${content}${" ".repeat(right)}`;
-    }
+    const headerCells = headers
+      .map(
+        (header) =>
+          `<th style="border:1px solid #2f2f2f;background-color:#a9a9a9;color:#111827;padding:7px 10px;font-weight:700;text-align:center;line-height:1.25;">${escapeHtml(header)}</th>`,
+      )
+      .join("");
 
-    function renderRow(row: string[], alignments: Array<"left" | "center" | "right">) {
-      const rowCells = row.map((cell, index) => {
-        const content = String(cell);
-        const width = columnWidths[index];
-        if (alignments[index] === "left") {
-          return content.padEnd(width, " ");
-        }
-        if (alignments[index] === "right") {
-          return content.padStart(width, " ");
-        }
-        return centerCell(content, width);
-      });
-      return `| ${rowCells.join(" | ")} |`;
-    }
+    const bodyRows = rows
+      .map(
+        (row) =>
+          `<tr>` +
+          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.customerCode)}</td>` +
+          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.invoiceNo)}</td>` +
+          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.itemNo)}</td>` +
+          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:left;">${escapeHtml(row.description)}</td>` +
+          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.type)}</td>` +
+          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:right;">${escapeHtml(row.amount)}</td>` +
+          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.batchNo)}</td>` +
+          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.lotNo)}</td>` +
+          `</tr>`,
+      )
+      .join("");
 
-    function drawLine(left: string, middle: string, right: string) {
-      return `${left}${columnWidths.map((width) => "-".repeat(width + 2)).join(middle)}${right}`;
-    }
-
-    const topBorder = drawLine("+", "+", "+");
-    const middleBorder = drawLine("+", "+", "+");
-    const bottomBorder = drawLine("+", "+", "+");
-    const headerRow = renderRow(headers, ["center", "center", "center", "center", "center", "center", "center", "center"]);
-    const dataRows = rows.map((row) =>
-      renderRow(row, ["center", "center", "center", "left", "center", "right", "center", "center"]),
-    );
-    const totalLabel = "Total Amount";
-    const leftSpanWidth = columnWidths.slice(0, 5).reduce((sum, width) => sum + width, 0) + 3 * 4;
-    const totalRow = `| ${totalLabel.padEnd(leftSpanWidth, " ")} | ${String(totalAmount.toFixed(2)).padStart(columnWidths[5], " ")} | ${"-".padStart(columnWidths[6], " ")} | ${"-".padStart(columnWidths[7], " ")} |`;
-    const emailTableText = [topBorder, headerRow, middleBorder, ...dataRows, middleBorder, totalRow, bottomBorder].join("\n");
+    const emailHtml =
+      `<!doctype html><html><body style="font-family:Calibri,Arial,sans-serif;color:#111827;">` +
+      `<table style="border-collapse:collapse;width:100%;font-size:13px;border:1px solid #2f2f2f;" cellspacing="0" cellpadding="0">` +
+      `<thead><tr>${headerCells}</tr></thead>` +
+      `<tbody>${bodyRows}</tbody>` +
+      `<tfoot><tr>` +
+      `<td colspan="5" style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:right;">Total Amount</td>` +
+      `<td style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:right;">${escapeHtml(totalAmount.toFixed(2))}</td>` +
+      `<td style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:center;">-</td>` +
+      `<td style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:center;">-</td>` +
+      `</tr></tfoot>` +
+      `</table></body></html>`;
 
     try {
-      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(emailTableText)}`;
-      window.location.href = mailtoUrl;
+      const emlContent = [
+        "To: credit@turkanafood.com",
+        "Subject: Credit Request",
+        "MIME-Version: 1.0",
+        "Content-Type: text/html; charset=UTF-8",
+        "",
+        emailHtml,
+      ].join("\r\n");
+
+      const blob = new Blob([emlContent], { type: "message/rfc822;charset=utf-8" });
+      const draftUrl = URL.createObjectURL(blob);
+      const draftLink = document.createElement("a");
+      draftLink.href = draftUrl;
+      draftLink.download = "credit-request-draft.eml";
+      document.body.appendChild(draftLink);
+      draftLink.click();
+      draftLink.remove();
+      URL.revokeObjectURL(draftUrl);
 
       if (pictures.length > 0) {
         setSendError("Please attach selected pictures manually before sending the email.");
         return;
       }
 
-      setSendSuccessMessage("Credit request draft prepared with table details in the email body.");
+      setSendSuccessMessage("Professional email draft file generated.");
     } catch {
       setSendError("Failed to send credit request email.");
     } finally {
