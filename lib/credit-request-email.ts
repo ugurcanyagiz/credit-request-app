@@ -52,6 +52,10 @@ function toTableRow(columns: string[], widths: number[]) {
     .join(" | ");
 }
 
+function encodeMailtoValue(value: string) {
+  return encodeURIComponent(value);
+}
+
 export function buildCreditRequestDraftText({
   cartRows,
   uploadedPhotos,
@@ -73,7 +77,7 @@ export function buildCreditRequestDraftText({
     .map((item) => toReasonText(item.item_descp))
     .filter(Boolean);
 
-  const rowWidths = [10, 38, 6, 14, 12] as const;
+  const rowWidths = [10, 38, 3, 12, 11] as const;
   const headerRow = toTableRow(["Item No", "Description", "Qty", "Sales Amount", "Piece Price"], [...rowWidths]);
   const dividerRow = rowWidths.map((width) => "-".repeat(width)).join("-+-");
 
@@ -82,14 +86,14 @@ export function buildCreditRequestDraftText({
     "",
     "Please review the credit request details below.",
     "",
-    "Customer Information",
-    `- Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
+    "CUSTOMER INFORMATION",
+    `Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
     "",
-    "Invoice Information",
-    `- Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
-    `- Total Requested Credit Amount: ${money(totalCreditAmount)}`,
+    "INVOICE INFORMATION",
+    `Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
+    `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
-    "Selected Items",
+    "SELECTED ITEMS",
     headerRow,
     dividerRow,
     ...(nonNoteItems.length > 0
@@ -107,16 +111,25 @@ export function buildCreditRequestDraftText({
         )
       : ["No selected product rows found."]),
     "",
-    ...(noteRows.length > 0 ? ["Notes / Comments", ...noteRows.map((note, index) => `${index + 1}. ${note}`), ""] : []),
+    ...(noteRows.length > 0 ? ["COMMENTS", ...noteRows.map((note, index) => `${index + 1}. ${note}`), ""] : []),
     ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
       ? [
-          "Photo Links",
+          "PHOTO LINKS",
           ...uploadedPhotos
             .filter((photo) => Boolean(photo.publicUrl))
-            .map((photo, index) => `${index + 1}. ${photo.fileName}: ${photo.publicUrl}`),
+            .flatMap((photo, index) => [
+              `Photo ${index + 1}:`,
+              ...(photo.fileName ? [`(${truncate(photo.fileName, 48)})`] : []),
+              photo.publicUrl,
+              "",
+            ]),
           "",
         ]
-      : ["Photo Links", "No hosted photo links available.", ""]),
+      : [
+          "PHOTO LINKS",
+          "No hosted photo links available.",
+          "",
+        ]),
     "Thank you.",
   ];
 
@@ -130,7 +143,7 @@ const MAX_MAILTO_URL_LENGTH = 1800;
 
 export function buildCreditRequestMailtoUrl({ subject, text }: { subject: string; text: string }) {
   const buildUrl = (body: string) =>
-    `mailto:${CREDIT_REQUEST_RECIPIENT}?${new URLSearchParams({ subject, body }).toString()}`;
+    `mailto:${CREDIT_REQUEST_RECIPIENT}?subject=${encodeMailtoValue(subject)}&body=${encodeMailtoValue(body)}`;
 
   const fullUrl = buildUrl(text);
   if (fullUrl.length <= MAX_MAILTO_URL_LENGTH) {
