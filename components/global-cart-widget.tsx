@@ -102,59 +102,67 @@ export function GlobalCartWidget() {
     setSendError(null);
     setSendSuccessMessage(null);
 
-    const headers = [
-      "Customer Code",
-      "Invoice",
-      "Item",
-      "Description",
-      "Type",
-      "Amount",
-      "Batch No",
-      "Lot No",
-    ];
+    const headers = ["Customer Code", "Invoice", "Item", "Description", "Type", "Amount", "Batch No", "Lot No"];
+    const rows = cartRows.map((item) => ({
+      customerCode: item.customer_code,
+      invoiceNo: item.invoice_no,
+      itemNo: item.item_no,
+      description: item.item_descp,
+      type: item.credit_type,
+      amount: Number(item.credit_amount).toFixed(2),
+      batchNo: item.sales_batch_number ?? "-",
+      lotNo: item.sales_lot_no ?? "-",
+    }));
 
-    const rows = cartRows.map((item) => [
-      item.customer_code,
-      item.invoice_no,
-      item.item_no,
-      item.item_descp,
-      item.credit_type,
-      Number(item.credit_amount).toFixed(2),
-      item.sales_batch_number ?? "-",
-      item.sales_lot_no ?? "-",
-    ]);
+    const tableStyle = "border-collapse:collapse;width:100%;font-family:Calibri,Arial,sans-serif;font-size:13px;color:#1f2937;border:1px solid #4b5563;";
+    const headerCellStyle =
+      "border:1px solid #374151;background-color:#b5b5b5;color:#111827;padding:8px 10px;font-weight:700;text-align:center;vertical-align:middle;";
+    const bodyCellStyle = "border:1px solid #6b7280;background-color:#ffffff;color:#1f2937;padding:7px 10px;text-align:center;vertical-align:middle;";
+    const totalLabelStyle =
+      "border:1px solid #374151;background-color:#e5e7eb;color:#111827;padding:8px 10px;font-weight:700;text-align:right;";
+    const totalValueStyle =
+      "border:1px solid #374151;background-color:#e5e7eb;color:#111827;padding:8px 10px;font-weight:700;text-align:center;";
 
-    const columnWidths = headers.map((header, index) =>
-      Math.max(header.length, ...rows.map((row) => String(row[index]).length)),
-    );
+    const escapeHtml = (value: string) =>
+      value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
 
-    function formatTableRow(row: string[]) {
-      return `| ${row.map((cell, index) => String(cell).padEnd(columnWidths[index], " ")).join(" | ")} |`;
-    }
+    const bodyRows = rows
+      .map(
+        (row) =>
+          `<tr>` +
+          `<td style="${bodyCellStyle}">${escapeHtml(row.customerCode)}</td>` +
+          `<td style="${bodyCellStyle}">${escapeHtml(row.invoiceNo)}</td>` +
+          `<td style="${bodyCellStyle}">${escapeHtml(row.itemNo)}</td>` +
+          `<td style="${bodyCellStyle};text-align:left;">${escapeHtml(row.description)}</td>` +
+          `<td style="${bodyCellStyle}">${escapeHtml(row.type)}</td>` +
+          `<td style="${bodyCellStyle}">${escapeHtml(row.amount)}</td>` +
+          `<td style="${bodyCellStyle}">${escapeHtml(row.batchNo)}</td>` +
+          `<td style="${bodyCellStyle}">${escapeHtml(row.lotNo)}</td>` +
+          `</tr>`,
+      )
+      .join("");
 
-    const tableDivider = `|-${columnWidths.map((width) => "-".repeat(width)).join("-|-")}-|`;
-    const formattedTable = [
-      formatTableRow(headers),
-      tableDivider,
-      ...rows.map((row) => formatTableRow(row)),
-    ];
+    const headerRow = headers.map((header) => `<th style="${headerCellStyle}">${escapeHtml(header)}</th>`).join("");
 
-    const lines = [
-      "Credit Request",
-      "",
-      "Cart Details (Excel-ready professional table format):",
-      ...formattedTable,
-      "",
-      `Total Amount: ${totalAmount.toFixed(2)}`,
-    ];
+    const emailTableHtml =
+      `<table style="${tableStyle}" cellspacing="0" cellpadding="0">` +
+      `<thead><tr>${headerRow}</tr></thead>` +
+      `<tbody>${bodyRows}</tbody>` +
+      `<tfoot><tr>` +
+      `<td colspan="5" style="${totalLabelStyle}">Total Amount</td>` +
+      `<td style="${totalValueStyle}">${escapeHtml(totalAmount.toFixed(2))}</td>` +
+      `<td style="${totalValueStyle}">-</td>` +
+      `<td style="${totalValueStyle}">-</td>` +
+      `</tr></tfoot>` +
+      `</table>`;
 
     try {
-      const body =
-        pictures.length > 0
-          ? `Dear Team,\n\nPlease find the credit request details below.\n\n${lines.join("\n")}\n\nSelected Pictures:\n${pictures.map((file) => `- ${file.name}`).join("\n")}`
-          : `Dear Team,\n\nPlease find the credit request details below.\n\n${lines.join("\n")}`;
-
-      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(body)}`;
+      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(emailTableHtml)}`;
       window.location.href = mailtoUrl;
 
       if (pictures.length > 0) {
