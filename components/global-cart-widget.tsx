@@ -20,6 +20,13 @@ export function GlobalCartWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [authorized, setAuthorized] = useState(true);
 
+  const cartRows = useMemo(() => {
+    const isManualNote = (item: CartItem) => item.item_descp.includes("Reason:");
+    const regularItems = items.filter((item) => !isManualNote(item));
+    const noteItems = items.filter((item) => isManualNote(item));
+    return [...regularItems, ...noteItems];
+  }, [items]);
+
   const totalAmount = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0),
     [items],
@@ -70,7 +77,7 @@ export function GlobalCartWidget() {
       "Lot No",
     ];
 
-    const rows = items.map((item) => [
+    const rows = cartRows.map((item) => [
       item.customer_code,
       item.invoice_no,
       item.item_no,
@@ -173,7 +180,7 @@ export function GlobalCartWidget() {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => (
+                    {cartRows.map((item) => (
                       <tr key={item.id} className="border-t border-zinc-200">
                         <td className="px-3 py-2">{item.customer_code}</td>
                         <td className="px-3 py-2">{item.invoice_no}</td>
