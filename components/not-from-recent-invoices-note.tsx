@@ -8,6 +8,11 @@ type NotFromRecentInvoicesNoteProps = {
   customerCode: string;
 };
 
+type ItemLookupOption = {
+  item_no: string;
+  item_descp: string;
+};
+
 export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoicesNoteProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -18,6 +23,42 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
   const [reason, setReason] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemOptions, setItemOptions] = useState<ItemLookupOption[]>([]);
+  const [isItemLookupLoading, setIsItemLookupLoading] = useState(false);
+  const [showItemOptions, setShowItemOptions] = useState(false);
+
+  async function loadItemOptions(searchValue: string) {
+    const normalizedSearch = searchValue.trim();
+    if (normalizedSearch.length < 2) {
+      setItemOptions([]);
+      setShowItemOptions(false);
+      return;
+    }
+
+    setIsItemLookupLoading(true);
+    const response = await fetch(
+      `/api/customers/${encodeURIComponent(customerCode)}/item-lookup?query=${encodeURIComponent(normalizedSearch)}`,
+    );
+    setIsItemLookupLoading(false);
+
+    if (!response.ok) {
+      setItemOptions([]);
+      setShowItemOptions(false);
+      return;
+    }
+
+    const payload = (await response.json().catch(() => null)) as { items?: ItemLookupOption[] } | null;
+    const options = payload?.items ?? [];
+    setItemOptions(options);
+    setShowItemOptions(options.length > 0);
+  }
+
+  function applyItemOption(option: ItemLookupOption) {
+    setItemNo(option.item_no);
+    setDescription(option.item_descp);
+    setItemOptions([]);
+    setShowItemOptions(false);
+  }
 
   function openModal() {
     setSubmitError(null);
@@ -88,6 +129,8 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
     setCreditType("case");
     setAmount("");
     setReason("");
+    setItemOptions([]);
+    setShowItemOptions(false);
     window.dispatchEvent(new Event("cart-updated"));
   }
 
@@ -137,12 +180,41 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
 
               <label className="block">
                 <span className="mb-1 block text-zinc-700">Item No</span>
-                <input
-                  type="text"
-                  value={itemNo}
-                  onChange={(event) => setItemNo(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={itemNo}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setItemNo(value);
+                      void loadItemOptions(value);
+                    }}
+                    onFocus={() => setShowItemOptions(itemOptions.length > 0)}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setShowItemOptions(false);
+                      }, 120);
+                    }}
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  />
+                  {showItemOptions ? (
+                    <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white py-1 shadow-lg">
+                      {itemOptions.map((option) => (
+                        <li key={option.item_no}>
+                          <button
+                            type="button"
+                            onClick={() => applyItemOption(option)}
+                            className="block w-full px-3 py-2 text-left hover:bg-zinc-50"
+                          >
+                            <p className="font-medium text-zinc-800">{option.item_no}</p>
+                            <p className="text-xs text-zinc-600">{option.item_descp}</p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+                {isItemLookupLoading ? <p className="mt-1 text-xs text-zinc-500">Searching item numbers…</p> : null}
               </label>
 
               <label className="block">
