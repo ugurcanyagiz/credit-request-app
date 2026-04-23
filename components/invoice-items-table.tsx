@@ -23,6 +23,7 @@ type InvoiceItemsTableProps = {
 
 export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceItemsTableProps) {
   const [selectedItem, setSelectedItem] = useState<InvoiceItem | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [creditType, setCreditType] = useState<CreditType>("case");
   const [caseCount, setCaseCount] = useState<string>("");
   const [piecesPerCase, setPiecesPerCase] = useState<string>("");
@@ -59,6 +60,18 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
   }, [pieceUnitPrice, numericRequestedPieces]);
 
   const autoCreditAmount = creditType === "case" ? caseCreditAmount : pieceCreditAmount;
+  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+  const filteredItems = useMemo(() => {
+    if (normalizedSearchTerm.length === 0) {
+      return items;
+    }
+
+    return items.filter((item) => {
+      const itemNo = item.item_no.toLocaleLowerCase();
+      const itemDescription = item.item_descp.toLocaleLowerCase();
+      return itemNo.includes(normalizedSearchTerm) || itemDescription.includes(normalizedSearchTerm);
+    });
+  }, [items, normalizedSearchTerm]);
 
   function openModal(item: InvoiceItem) {
     setSelectedItem(item);
@@ -114,6 +127,20 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
 
   return (
     <>
+      <div className="mb-3 space-y-1">
+        <label htmlFor="invoice-item-search" className="block text-sm font-medium text-zinc-700">
+          Search Items
+        </label>
+        <input
+          id="invoice-item-search"
+          type="search"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Filter by Item No or Item Description"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+        />
+      </div>
+
       <div className="overflow-x-auto rounded-md border border-zinc-200">
         <table className="min-w-full text-sm">
           <thead className="bg-zinc-50 text-left">
@@ -125,22 +152,30 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
             </tr>
           </thead>
           <tbody>
-            {items.map((item, index) => (
-              <tr key={`${item.item_no}-${index}`} className="border-t border-zinc-200">
-                <td className="px-3 py-2">
-                  <button
-                    type="button"
-                    onClick={() => openModal(item)}
-                    className="font-medium text-blue-700 underline-offset-2 hover:underline"
-                  >
-                    {item.item_no}
-                  </button>
+            {filteredItems.length > 0 ? (
+              filteredItems.map((item, index) => (
+                <tr key={`${item.item_no}-${index}`} className="border-t border-zinc-200">
+                  <td className="px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => openModal(item)}
+                      className="font-medium text-blue-700 underline-offset-2 hover:underline"
+                    >
+                      {item.item_no}
+                    </button>
+                  </td>
+                  <td className="px-3 py-2">{item.item_descp}</td>
+                  <td className="px-3 py-2">{item.quantity}</td>
+                  <td className="px-3 py-2">{item.sales_amount}</td>
+                </tr>
+              ))
+            ) : (
+              <tr className="border-t border-zinc-200">
+                <td colSpan={4} className="px-3 py-4 text-center text-zinc-500">
+                  No items match your search.
                 </td>
-                <td className="px-3 py-2">{item.item_descp}</td>
-                <td className="px-3 py-2">{item.quantity}</td>
-                <td className="px-3 py-2">{item.sales_amount}</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
