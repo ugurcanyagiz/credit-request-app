@@ -42,8 +42,11 @@ export function GlobalCartWidget() {
   const [isUploadingPictures, setIsUploadingPictures] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isRemovingAll, setIsRemovingAll] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccessMessage, setSendSuccessMessage] = useState<string | null>(null);
+  const [removeAllMessage, setRemoveAllMessage] = useState<string | null>(null);
+  const [removeAllError, setRemoveAllError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cartRows = useMemo(() => {
@@ -160,6 +163,46 @@ export function GlobalCartWidget() {
     setPhotoError(null);
     setPictures((previousPictures) => previousPictures.filter((picture) => picture.id !== photoId));
     setSelectedPicture((currentPicture) => (currentPicture?.id === photoId ? null : currentPicture));
+  }
+
+  async function removeAllFromCart() {
+    if ((items.length === 0 && pictures.length === 0) || isRemovingAll) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Remove all credit request cart items and all uploaded photo evidence? This action cannot be undone.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsRemovingAll(true);
+    setRemoveAllError(null);
+    setRemoveAllMessage(null);
+    setSendError(null);
+    setSendSuccessMessage(null);
+
+    try {
+      const response = await fetch("/api/cart", { method: "DELETE" });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setRemoveAllError(payload?.error ?? "Failed to remove all cart data.");
+        return;
+      }
+
+      setSelectedPicture(null);
+      setItems([]);
+      setPictures([]);
+      setPhotoError(null);
+      setRemoveAllMessage("Cart cleared. All line items and uploaded photos were removed.");
+      await loadCart();
+      await loadPhotos();
+    } catch {
+      setRemoveAllError("Failed to remove all cart data.");
+    } finally {
+      setIsRemovingAll(false);
+    }
   }
 
   async function sendCreditRequest() {
@@ -279,10 +322,18 @@ export function GlobalCartWidget() {
                   <button
                     type="button"
                     onClick={() => void sendCreditRequest()}
-                    disabled={items.length === 0 || isSending}
+                    disabled={items.length === 0 || isSending || isRemovingAll}
                     className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSending ? "Preparing Email Draft..." : "Send Credit Request"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void removeAllFromCart()}
+                    disabled={(items.length === 0 && pictures.length === 0) || isRemovingAll}
+                    className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isRemovingAll ? "Removing..." : "Remove All"}
                   </button>
                   <button
                     type="button"
@@ -431,6 +482,16 @@ export function GlobalCartWidget() {
               {sendSuccessMessage ? (
                 <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                   {sendSuccessMessage}
+                </p>
+              ) : null}
+              {removeAllError ? (
+                <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {removeAllError}
+                </p>
+              ) : null}
+              {removeAllMessage ? (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  {removeAllMessage}
                 </p>
               ) : null}
               <p className="text-xs text-slate-500">
