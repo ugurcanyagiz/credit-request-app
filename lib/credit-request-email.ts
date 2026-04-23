@@ -97,13 +97,23 @@ function toReasonRowKey(item: CreditRequestCartItem) {
   return `${item.customer_code}::${item.invoice_no}::${item.item_no}`;
 }
 
-function toTableRow(columns: string[], widths: number[]) {
+type TableAlignment = "left" | "right";
+
+function toTableCell(value: string, width: number, alignment: TableAlignment) {
+  const normalizedValue = truncate(value, width).replace(/\s+/g, " ");
+  return alignment === "right"
+    ? normalizedValue.padStart(width, " ")
+    : normalizedValue.padEnd(width, " ");
+}
+
+function toTableRow(columns: string[], widths: number[], alignments: TableAlignment[]) {
   return columns
-    .map((value, index) => {
-      const normalizedValue = truncate(value, widths[index]).replace(/\s+/g, " ");
-      return normalizedValue.padEnd(widths[index], " ");
-    })
-    .join(" | ");
+    .map((value, index) => toTableCell(value, widths[index], alignments[index]))
+    .join("  ");
+}
+
+function getTableWidths(headers: string[], configuredWidths: number[]) {
+  return headers.map((header, index) => Math.max(header.length, configuredWidths[index]));
 }
 
 function encodeMailtoValue(value: string) {
@@ -156,9 +166,12 @@ export function buildCreditRequestDraftText({
     uniqueInvoices.join(", ") || "N/A"
   } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
 
-  const rowWidths = [10, 28, 28, 3, 12, 11] as const;
-  const headerRow = toTableRow(["Item No", "Description", "Reason", "Qty", "Sales Amount", "Piece Price"], [...rowWidths]);
-  const dividerRow = rowWidths.map((width) => "-".repeat(width)).join("-+-");
+  const tableHeaders = ["Item No", "Description", "Reason", "Qty", "Sales Amount", "Piece Price"] as const;
+  const rowWidths = getTableWidths([...tableHeaders], [8, 32, 20, 5, 12, 11]);
+  const rowAlignments: TableAlignment[] = ["left", "left", "left", "right", "right", "right"];
+  const headerRow = toTableRow([...tableHeaders], [...rowWidths], rowAlignments);
+  const tableWidth = headerRow.length;
+  const dividerRow = "-".repeat(tableWidth);
 
   const textLines = [
     "Hello Credit Team,",
@@ -173,6 +186,7 @@ export function buildCreditRequestDraftText({
     `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
     "SELECTED ITEMS",
+    dividerRow,
     headerRow,
     dividerRow,
     ...(displayRows.length > 0
@@ -187,9 +201,11 @@ export function buildCreditRequestDraftText({
               money(Number(item.piece_price ?? 0)),
             ],
             [...rowWidths],
+            rowAlignments,
           ),
         )
       : ["No selected product rows found."]),
+    dividerRow,
     "",
     ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
       ? [
