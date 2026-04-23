@@ -125,6 +125,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
     setSelectedItem(null);
   }
 
+
   return (
     <>
       <div className="mb-3 space-y-1">
@@ -179,7 +180,6 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
           </tbody>
         </table>
       </div>
-
       {selectedItem ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl">
