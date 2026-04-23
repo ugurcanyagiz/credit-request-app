@@ -36,6 +36,7 @@ export function GlobalCartWidget() {
   const [authorized, setAuthorized] = useState(true);
   const [pictures, setPictures] = useState<CartPhoto[]>([]);
   const [selectedPicture, setSelectedPicture] = useState<CartPhoto | null>(null);
+  const [isPreviewImageBroken, setIsPreviewImageBroken] = useState(false);
   const [isUploadingPictures, setIsUploadingPictures] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -242,6 +243,23 @@ export function GlobalCartWidget() {
     };
   }, [loadCart, loadPhotos]);
 
+  useEffect(() => {
+    if (!selectedPicture) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setSelectedPicture(null);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [selectedPicture]);
+
   if (!authorized) {
     return null;
   }
@@ -383,7 +401,10 @@ export function GlobalCartWidget() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setSelectedPicture(picture)}
+                            onClick={() => {
+                              setIsPreviewImageBroken(false);
+                              setSelectedPicture(picture);
+                            }}
                             className="block aspect-square w-full"
                             aria-label={`Preview ${picture.fileName}`}
                           >
@@ -470,13 +491,26 @@ export function GlobalCartWidget() {
                 >
                   ✕
                 </button>
-                <Image
-                  src={selectedPicture.publicUrl}
-                  alt={selectedPicture.fileName}
-                  width={1280}
-                  height={1280}
-                  className="max-h-[90vh] w-auto rounded-lg object-contain"
-                />
+                {!isPreviewImageBroken ? (
+                  <img
+                    src={selectedPicture.publicUrl}
+                    alt={selectedPicture.fileName}
+                    className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+                    onError={() => setIsPreviewImageBroken(true)}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                    <p>Unable to render this full-size preview in the modal.</p>
+                    <a
+                      href={selectedPicture.publicUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-block font-medium underline"
+                    >
+                      Open image in new tab
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           ) : null}
