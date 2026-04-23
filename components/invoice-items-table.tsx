@@ -14,6 +14,18 @@ type InvoiceItem = {
 };
 
 type CreditType = "case" | "piece";
+type ReasonOption = "Damaged" | "Molded" | "Leaking" | "Sugared" | "Spoiled" | "Wrong Item" | "Expired" | "Other";
+
+const REASON_OPTIONS: ReasonOption[] = [
+  "Damaged",
+  "Molded",
+  "Leaking",
+  "Sugared",
+  "Spoiled",
+  "Wrong Item",
+  "Expired",
+  "Other",
+];
 
 type InvoiceItemsTableProps = {
   items: InvoiceItem[];
@@ -28,6 +40,9 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
   const [caseCount, setCaseCount] = useState<string>("");
   const [piecesPerCase, setPiecesPerCase] = useState<string>("");
   const [requestedPieces, setRequestedPieces] = useState<string>("");
+  const [selectedReasons, setSelectedReasons] = useState<ReasonOption[]>([]);
+  const [otherReason, setOtherReason] = useState("");
+  const [isReasonDropdownOpen, setIsReasonDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -79,6 +94,9 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
     setCaseCount("");
     setPiecesPerCase("");
     setRequestedPieces("");
+    setSelectedReasons([]);
+    setOtherReason("");
+    setIsReasonDropdownOpen(false);
     setSubmitError(null);
   }
 
@@ -88,6 +106,21 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
 
   async function addSelectedItemToCart() {
     if (!selectedItem || autoCreditAmount === null || !Number.isFinite(autoCreditAmount)) {
+      return;
+    }
+
+    if (selectedReasons.length === 0) {
+      setSubmitError("Please select at least one reason.");
+      return;
+    }
+
+    const resolvedReasons: string[] = [
+      ...selectedReasons.filter((reason) => reason !== "Other"),
+      ...(selectedReasons.includes("Other") && otherReason.trim().length > 0 ? [otherReason.trim()] : []),
+    ];
+
+    if (resolvedReasons.length === 0) {
+      setSubmitError("Please enter a reason for Other.");
       return;
     }
 
@@ -113,14 +146,42 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
         credit_amount: autoCreditAmount,
       }),
     });
-    setIsSubmitting(false);
-
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
       setSubmitError(payload?.error ?? "Failed to add item to cart");
+      setIsSubmitting(false);
       return;
     }
 
+    const reasonResponse = await fetch("/api/cart", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customer_code: customerCode,
+        invoice_no: invoiceNo,
+        item_no: selectedItem.item_no,
+        item_descp: `Reason: ${resolvedReasons.join(" - ")}`,
+        quantity: 0,
+        sales_amount: 0,
+        sales_batch_number: null,
+        sales_lot_no: null,
+        batch_expiration_date: null,
+        piece_price: 0,
+        credit_type: creditType,
+        credit_amount: 0,
+      }),
+    });
+
+    if (!reasonResponse.ok) {
+      const payload = (await reasonResponse.json().catch(() => null)) as { error?: string } | null;
+      setSubmitError(payload?.error ?? "Failed to add item reason");
+      setIsSubmitting(false);
+      return;
+    }
+
+    setIsSubmitting(false);
     window.dispatchEvent(new Event("cart-updated"));
     setSelectedItem(null);
   }
@@ -202,7 +263,68 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
               <p><span className="font-medium">Sales Batch Number:</span> {selectedItem.sales_batch_number}</p>
               <p><span className="font-medium">Sales Lot No:</span> {selectedItem.sales_lot_no}</p>
               <p><span className="font-medium">Batch Expiration Date:</span> {selectedItem.batch_expiration_date}</p>
-              <p><span className="font-medium">Case Price (piece_price):</span> {selectedItem.piece_price}</p>
+              <p><span className="font-medium">Case Price:</span> {selectedItem.piece_price}</p>
+            </div>
+
+            <div className="mt-5 rounded-md border border-zinc-200 p-4">
+              <h4 className="mb-3 font-semibold">Reason</h4>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsReasonDropdownOpen((previous) => !previous)}
+                  className="flex w-full items-center justify-between rounded-md border border-zinc-300 px-3 py-2 text-left text-sm"
+                >
+                  <span className="truncate">
+                    {selectedReasons.length > 0 ? selectedReasons.join(", ") : "Select reason(s)"}
+                  </span>
+                  <span className="ml-3 text-xs text-zinc-500">{isReasonDropdownOpen ? "▲" : "▼"}</span>
+                </button>
+
+                {isReasonDropdownOpen ? (
+                  <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white p-2 shadow-lg">
+                    <div className="grid gap-2 text-sm">
+                      {REASON_OPTIONS.map((option) => {
+                        const checked = selectedReasons.includes(option);
+                        return (
+                          <label key={option} className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(event) => {
+                                if (event.target.checked) {
+                                  setSelectedReasons((previousReasons) => [...previousReasons, option]);
+                                  return;
+                                }
+
+                                setSelectedReasons((previousReasons) =>
+                                  previousReasons.filter((reason) => reason !== option),
+                                );
+
+                                if (option === "Other") {
+                                  setOtherReason("");
+                                }
+                              }}
+                            />
+                            {option}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {selectedReasons.includes("Other") ? (
+                <label className="mt-3 block text-sm">
+                  <span className="mb-1 block text-zinc-700">Other reason</span>
+                  <input
+                    type="text"
+                    value={otherReason}
+                    onChange={(event) => setOtherReason(event.target.value)}
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  />
+                </label>
+              ) : null}
             </div>
 
             <div className="mt-5 rounded-md border border-zinc-200 p-4">
