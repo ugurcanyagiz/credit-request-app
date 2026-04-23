@@ -242,8 +242,8 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
         </table>
       </div>
       {selectedItem ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-3 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="mx-auto my-4 max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-5 shadow-xl sm:my-0 sm:max-h-[90vh]">
             <div className="mb-4 flex items-start justify-between gap-4">
               <h3 className="text-lg font-semibold">Product Detail & Credit Request</h3>
               <button
