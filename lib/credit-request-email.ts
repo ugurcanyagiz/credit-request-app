@@ -43,6 +43,35 @@ function toReasonText(itemDescription: string) {
   return itemDescription.replace("Reason:", "").trim();
 }
 
+function isStandaloneReasonRow(itemDescription: string) {
+  return itemDescription.trim().startsWith("Reason:");
+}
+
+function parseReasonAndDescription(itemDescription: string) {
+  const normalizedDescription = itemDescription.trim();
+
+  if (normalizedDescription.startsWith("Reason:")) {
+    const reason = normalizedDescription.replace(/^Reason:/, "").trim();
+    return { description: "-", reason: reason.length > 0 ? reason : null };
+  }
+
+  const splitOnReason = normalizedDescription.split(/\s*\|\s*Reason:\s*/i);
+  if (splitOnReason.length > 1) {
+    const [descriptionPart, ...reasonParts] = splitOnReason;
+    const reason = reasonParts.join(" | ").trim();
+    return {
+      description: descriptionPart.trim() || "-",
+      reason: reason.length > 0 ? reason : null,
+    };
+  }
+
+  return { description: normalizedDescription || "-", reason: null };
+}
+
+function toReasonRowKey(item: CreditRequestCartItem) {
+  return `${item.customer_code}::${item.invoice_no}::${item.item_no}`;
+}
+
 function toTableRow(columns: string[], widths: number[]) {
   return columns
     .map((value, index) => {
@@ -63,7 +92,37 @@ export function buildCreditRequestDraftText({
   cartRows: CreditRequestCartItem[];
   uploadedPhotos: UploadedPhotoReference[];
 }) {
-  const nonNoteItems = cartRows.filter((item) => !item.item_descp.includes("Reason:"));
+  const nonNoteItems = cartRows.filter((item) => !isStandaloneReasonRow(item.item_descp));
+  const reasonRowsByKey = new Map<string, string[]>();
+
+  for (const item of cartRows) {
+    if (!isStandaloneReasonRow(item.item_descp)) {
+      continue;
+    }
+
+    const parsed = parseReasonAndDescription(item.item_descp);
+    if (!parsed.reason) {
+      continue;
+    }
+
+    const key = toReasonRowKey(item);
+    const existing = reasonRowsByKey.get(key) ?? [];
+    existing.push(parsed.reason);
+    reasonRowsByKey.set(key, existing);
+  }
+
+  const displayRows = nonNoteItems.map((item) => {
+    const parsed = parseReasonAndDescription(item.item_descp);
+    const key = toReasonRowKey(item);
+    const queuedReason = reasonRowsByKey.get(key)?.shift() ?? null;
+
+    return {
+      item,
+      description: parsed.description,
+      reason: parsed.reason ?? queuedReason ?? "—",
+    };
+  });
+
   const uniqueCustomers = [...new Set(cartRows.map((item) => item.customer_code).filter(Boolean))];
   const uniqueInvoices = [...new Set(cartRows.map((item) => item.invoice_no).filter(Boolean))];
   const totalCreditAmount = cartRows.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0);
@@ -77,8 +136,8 @@ export function buildCreditRequestDraftText({
     .map((item) => toReasonText(item.item_descp))
     .filter(Boolean);
 
-  const rowWidths = [10, 38, 3, 12, 11] as const;
-  const headerRow = toTableRow(["Item No", "Description", "Qty", "Sales Amount", "Piece Price"], [...rowWidths]);
+  const rowWidths = [10, 28, 28, 3, 12, 11] as const;
+  const headerRow = toTableRow(["Item No", "Description", "Reason", "Qty", "Sales Amount", "Piece Price"], [...rowWidths]);
   const dividerRow = rowWidths.map((width) => "-".repeat(width)).join("-+-");
 
   const textLines = [
@@ -96,12 +155,13 @@ export function buildCreditRequestDraftText({
     "SELECTED ITEMS",
     headerRow,
     dividerRow,
-    ...(nonNoteItems.length > 0
-      ? nonNoteItems.map((item) =>
+    ...(displayRows.length > 0
+      ? displayRows.map(({ item, description, reason }) =>
           toTableRow(
             [
               item.item_no || "-",
-              item.item_descp || "-",
+              description,
+              reason,
               String(item.quantity ?? 0),
               money(Number(item.sales_amount ?? 0)),
               money(Number(item.piece_price ?? 0)),
