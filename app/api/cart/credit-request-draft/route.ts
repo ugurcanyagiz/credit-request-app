@@ -1,6 +1,11 @@
 import { getServerSession } from "next-auth";
 
-import { buildCreditRequestDraft, type CreditRequestCartItem } from "@/lib/credit-request-email";
+import {
+  buildCreditRequestDraftText,
+  buildCreditRequestMailtoUrl,
+  CREDIT_REQUEST_RECIPIENT,
+  type CreditRequestCartItem,
+} from "@/lib/credit-request-email";
 import { authOptions } from "@/lib/auth";
 import { ensureCartDraftId, listDraftPhotos, resolveUserId } from "@/lib/cart-draft";
 
@@ -78,15 +83,22 @@ export async function POST(request: Request) {
       storagePath: photo.storage_path,
     }));
 
-    const draft = buildCreditRequestDraft({
+    const draft = buildCreditRequestDraftText({
       cartRows: cartRowsCandidate as CreditRequestCartItem[],
       uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
+    });
+    const mailtoDraft = buildCreditRequestMailtoUrl({
+      subject: draft.subject,
+      text: draft.text,
     });
 
     return Response.json({
       ok: true,
+      recipient: CREDIT_REQUEST_RECIPIENT,
       photos: uploadedPhotos,
       draft,
+      mailtoUrl: mailtoDraft.url,
+      isBodyTruncated: mailtoDraft.isBodyTruncated,
     });
   } catch (error) {
     console.error("Failed to prepare draft", error);

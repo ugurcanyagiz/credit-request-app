@@ -9,9 +9,11 @@ import type { CreditRequestCartItem } from "@/lib/credit-request-email";
 type CartItem = CreditRequestCartItem;
 
 type DraftResponse = {
+  recipient: string;
+  mailtoUrl: string;
+  isBodyTruncated: boolean;
   draft: {
     subject: string;
-    html: string;
     text: string;
   };
   photos: Array<{
@@ -42,8 +44,6 @@ export function GlobalCartWidget() {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccessMessage, setSendSuccessMessage] = useState<string | null>(null);
-  const [draftData, setDraftData] = useState<DraftResponse | null>(null);
-  const [copiedText, setCopiedText] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cartRows = useMemo(() => {
@@ -115,8 +115,6 @@ export function GlobalCartWidget() {
 
     setPhotoError(null);
     setSendSuccessMessage(null);
-    setDraftData(null);
-    setCopiedText(false);
     setIsUploadingPictures(true);
 
     try {
@@ -164,7 +162,7 @@ export function GlobalCartWidget() {
     setSelectedPicture((currentPicture) => (currentPicture?.id === photoId ? null : currentPicture));
   }
 
-  async function prepareCreditRequestDraft() {
+  async function sendCreditRequest() {
     if (cartRows.length === 0 || isSending) {
       return;
     }
@@ -181,8 +179,6 @@ export function GlobalCartWidget() {
     setIsSending(true);
     setSendError(null);
     setSendSuccessMessage(null);
-    setDraftData(null);
-    setCopiedText(false);
 
     try {
       const formData = new FormData();
@@ -200,28 +196,21 @@ export function GlobalCartWidget() {
         return;
       }
 
-      setDraftData(payload);
+      if (!payload.mailtoUrl) {
+        setSendError("Unable to prepare email draft link.");
+        return;
+      }
+
+      window.location.assign(payload.mailtoUrl);
       setSendSuccessMessage(
-        "Draft prepared with hosted image URLs. Copy and paste into your email provider (HTML-friendly editor recommended).",
+        payload.isBodyTruncated
+          ? `Email draft opened to ${payload.recipient}. Some body content was shortened to fit mail app limits.`
+          : `Email draft opened in your default mail app to ${payload.recipient}. Review and send.`,
       );
     } catch {
       setSendError("Failed to prepare the email draft.");
     } finally {
       setIsSending(false);
-    }
-  }
-
-  async function copyPlainTextDraft() {
-    if (!draftData?.draft.text) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(`Subject: ${draftData.draft.subject}\n\n${draftData.draft.text}`);
-      setCopiedText(true);
-    } catch {
-      setCopiedText(false);
-      setSendError("Unable to copy draft text to clipboard.");
     }
   }
 
@@ -289,11 +278,11 @@ export function GlobalCartWidget() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => void prepareCreditRequestDraft()}
+                    onClick={() => void sendCreditRequest()}
                     disabled={items.length === 0 || isSending}
                     className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isSending ? "Preparing Draft..." : "Prepare Hosted HTML Draft"}
+                    {isSending ? "Preparing Email Draft..." : "Send Credit Request"}
                   </button>
                   <button
                     type="button"
@@ -436,30 +425,6 @@ export function GlobalCartWidget() {
                 ) : null}
               </div>
 
-              {draftData ? (
-                <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/30 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h4 className="text-sm font-semibold text-slate-900">HTML Draft Preview</h4>
-                    <button
-                      type="button"
-                      onClick={() => void copyPlainTextDraft()}
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                    >
-                      {copiedText ? "Copied" : "Copy Plain Text"}
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-600">
-                    Subject: <strong>{draftData.draft.subject}</strong>
-                  </p>
-                  <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-200 bg-white p-3">
-                    <div dangerouslySetInnerHTML={{ __html: draftData.draft.html }} />
-                  </div>
-                  <p className="text-xs text-slate-600">
-                    Uploaded photos are hosted and included as real URLs in the HTML above.
-                  </p>
-                </section>
-              ) : null}
-
               {sendError ? (
                 <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{sendError}</p>
               ) : null}
@@ -469,7 +434,7 @@ export function GlobalCartWidget() {
                 </p>
               ) : null}
               <p className="text-xs text-slate-500">
-                Recipient remains <strong>credit@turkanafood.com</strong>. This flow prepares production-safe HTML content with hosted image links.
+                Recipient: <strong>credit@turkanafood.com</strong>. This opens your default email app with a ready-to-send draft.
               </p>
             </div>
           </div>

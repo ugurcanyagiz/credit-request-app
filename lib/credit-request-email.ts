@@ -21,20 +21,38 @@ export type UploadedPhotoReference = {
   publicUrl: string;
 };
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
+const CREDIT_REQUEST_RECIPIENT = "credit@turkanafood.com";
 
 function money(value: number) {
   return Number.isFinite(value) ? value.toFixed(2) : "0.00";
 }
 
-export function buildCreditRequestDraft({
+function truncate(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  if (maxLength <= 3) {
+    return value.slice(0, maxLength);
+  }
+
+  return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function toReasonText(itemDescription: string) {
+  return itemDescription.replace("Reason:", "").trim();
+}
+
+function toTableRow(columns: string[], widths: number[]) {
+  return columns
+    .map((value, index) => {
+      const normalizedValue = truncate(value, widths[index]).replace(/\s+/g, " ");
+      return normalizedValue.padEnd(widths[index], " ");
+    })
+    .join(" | ");
+}
+
+export function buildCreditRequestDraftText({
   cartRows,
   uploadedPhotos,
 }: {
@@ -46,113 +64,87 @@ export function buildCreditRequestDraft({
   const uniqueInvoices = [...new Set(cartRows.map((item) => item.invoice_no).filter(Boolean))];
   const totalCreditAmount = cartRows.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0);
 
-  const subject = `Credit Request | Customer ${uniqueCustomers.join(", ") || "N/A"} | Invoice ${
+  const subject = `Credit Request - Customer ${uniqueCustomers.join(", ") || "N/A"} - Invoice ${
     uniqueInvoices.join(", ") || "N/A"
-  } | ${cartRows.length} Item(s)`;
+  } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
 
   const noteRows = cartRows
     .filter((item) => item.item_descp.includes("Reason:"))
-    .map((item) => item.item_descp.replace("Reason:", "").trim())
+    .map((item) => toReasonText(item.item_descp))
     .filter(Boolean);
 
+  const rowWidths = [10, 38, 6, 14, 12] as const;
+  const headerRow = toTableRow(["Item No", "Description", "Qty", "Sales Amount", "Piece Price"], [...rowWidths]);
+  const dividerRow = rowWidths.map((width) => "-".repeat(width)).join("-+-");
+
   const textLines = [
-    "Hello Team,",
+    "Hello Credit Team,",
     "",
     "Please review the credit request details below.",
     "",
-    `Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
-    `Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
-    `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
+    "Customer Information",
+    `- Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
     "",
-    "Selected Items:",
-    "------------------------------------------------------------",
-    ...nonNoteItems.map(
-      (item) =>
-        `${item.item_no || "-"} | ${item.item_descp || "-"} | Qty: ${item.quantity ?? 0} | Sales Amt: ${money(
-          Number(item.sales_amount ?? 0),
-        )} | Price: ${money(Number(item.piece_price ?? 0))}`,
-    ),
-    "------------------------------------------------------------",
+    "Invoice Information",
+    `- Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
+    `- Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
-    ...(noteRows.length > 0 ? ["Notes:", ...noteRows.map((note, index) => `${index + 1}. ${note}`), ""] : []),
-    ...(uploadedPhotos.length > 0
+    "Selected Items",
+    headerRow,
+    dividerRow,
+    ...(nonNoteItems.length > 0
+      ? nonNoteItems.map((item) =>
+          toTableRow(
+            [
+              item.item_no || "-",
+              item.item_descp || "-",
+              String(item.quantity ?? 0),
+              money(Number(item.sales_amount ?? 0)),
+              money(Number(item.piece_price ?? 0)),
+            ],
+            [...rowWidths],
+          ),
+        )
+      : ["No selected product rows found."]),
+    "",
+    ...(noteRows.length > 0 ? ["Notes / Comments", ...noteRows.map((note, index) => `${index + 1}. ${note}`), ""] : []),
+    ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
       ? [
-          "Uploaded Photos:",
-          ...uploadedPhotos.map((photo, index) => `${index + 1}. ${photo.fileName}: ${photo.publicUrl}`),
+          "Photo Links",
+          ...uploadedPhotos
+            .filter((photo) => Boolean(photo.publicUrl))
+            .map((photo, index) => `${index + 1}. ${photo.fileName}: ${photo.publicUrl}`),
           "",
         ]
-      : ["Uploaded Photos: None", ""]),
+      : ["Photo Links", "No hosted photo links available.", ""]),
     "Thank you.",
   ];
 
-  const html = `<!doctype html>
-<html>
-  <body style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.4;">
-    <p>Hello Team,</p>
-    <p>Please review the credit request details below.</p>
-
-    <p><strong>Customer Code(s):</strong> ${escapeHtml(uniqueCustomers.join(", ") || "-")}<br />
-    <strong>Invoice No(s):</strong> ${escapeHtml(uniqueInvoices.join(", ") || "-")}<br />
-    <strong>Total Requested Credit Amount:</strong> ${escapeHtml(money(totalCreditAmount))}</p>
-
-    <h3 style="margin-bottom: 8px;">Selected Items</h3>
-    <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; font-size: 13px;">
-      <thead style="background-color: #e2e8f0;">
-        <tr>
-          <th align="left">Item No</th>
-          <th align="left">Description</th>
-          <th align="right">Qty</th>
-          <th align="right">Sales Amt</th>
-          <th align="right">Price</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${
-          nonNoteItems.length > 0
-            ? nonNoteItems
-                .map(
-                  (item) => `<tr>
-          <td>${escapeHtml(item.item_no || "-")}</td>
-          <td>${escapeHtml(item.item_descp || "-")}</td>
-          <td align="right">${escapeHtml(String(item.quantity ?? 0))}</td>
-          <td align="right">${escapeHtml(money(Number(item.sales_amount ?? 0)))}</td>
-          <td align="right">${escapeHtml(money(Number(item.piece_price ?? 0)))}</td>
-        </tr>`,
-                )
-                .join("\n")
-            : `<tr><td colspan="5">No selected product rows found</td></tr>`
-        }
-      </tbody>
-    </table>
-
-    ${
-      noteRows.length > 0
-        ? `<h3 style="margin-bottom: 8px;">Notes</h3>
-           <ol>${noteRows.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ol>`
-        : ""
-    }
-
-    <h3 style="margin-bottom: 8px;">Uploaded Photos</h3>
-    ${
-      uploadedPhotos.length > 0
-        ? `<div style="display: flex; flex-wrap: wrap; gap: 16px;">${uploadedPhotos
-            .map(
-              (photo) => `<figure style="margin: 0; width: 220px;">
-              <img src="${escapeHtml(photo.publicUrl)}" alt="${escapeHtml(photo.fileName)}" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; object-fit: cover;" />
-              <figcaption style="font-size: 12px; margin-top: 4px;">${escapeHtml(photo.fileName)}</figcaption>
-            </figure>`,
-            )
-            .join("")}</div>`
-        : "<p>No photos uploaded.</p>"
-    }
-
-    <p>Thank you.</p>
-  </body>
-</html>`;
-
   return {
     subject,
-    html,
     text: textLines.join("\n"),
   };
 }
+
+const MAX_MAILTO_URL_LENGTH = 1800;
+
+export function buildCreditRequestMailtoUrl({ subject, text }: { subject: string; text: string }) {
+  const buildUrl = (body: string) =>
+    `mailto:${CREDIT_REQUEST_RECIPIENT}?${new URLSearchParams({ subject, body }).toString()}`;
+
+  const fullUrl = buildUrl(text);
+  if (fullUrl.length <= MAX_MAILTO_URL_LENGTH) {
+    return { url: fullUrl, isBodyTruncated: false };
+  }
+
+  const truncationNotice = "\n\n[Email body truncated to fit mail client limits. Please review request details in app if needed.]";
+  const allowedBodyLength = Math.max(300, text.length - (fullUrl.length - MAX_MAILTO_URL_LENGTH) - truncationNotice.length);
+  const truncatedText = `${text.slice(0, allowedBodyLength)}${truncationNotice}`;
+
+  return {
+    url: buildUrl(truncatedText),
+    isBodyTruncated: true,
+  };
+}
+
+export { CREDIT_REQUEST_RECIPIENT };
