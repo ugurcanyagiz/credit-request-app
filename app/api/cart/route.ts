@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import type { Session } from "next-auth";
 
+const PHOTO_BUCKET = process.env.SUPABASE_CART_PHOTOS_BUCKET || "credit-request-cart-photos";
+
 type CartInsertPayload = {
   customer_code?: string;
   invoice_no?: string;
@@ -127,22 +129,91 @@ export async function DELETE(request: Request) {
 
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
+  const supabaseAdmin = getSupabaseAdmin();
 
-  if (!id) {
-    return Response.json({ error: "Missing id" }, { status: 400 });
+  if (id) {
+    const { error } = await supabaseAdmin
+      .from("credit_request_cart_items")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId)
+      .eq("salesperson", session.user.salespersonName);
+
+    if (error) {
+      console.error("Failed to remove cart item", error);
+      return Response.json({ error: "Failed to remove cart item" }, { status: 500 });
+    }
+
+    return Response.json({ ok: true });
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
-  const { error } = await supabaseAdmin
+  const { error: clearItemsError } = await supabaseAdmin
     .from("credit_request_cart_items")
     .delete()
-    .eq("id", id)
     .eq("user_id", userId)
     .eq("salesperson", session.user.salespersonName);
 
-  if (error) {
-    console.error("Failed to remove cart item", error);
-    return Response.json({ error: "Failed to remove cart item" }, { status: 500 });
+  if (clearItemsError) {
+    console.error("Failed to clear cart items", clearItemsError);
+    return Response.json({ error: "Failed to clear cart items" }, { status: 500 });
+  }
+
+  const { data: draft, error: draftLookupError } = await supabaseAdmin
+    .from("credit_request_cart_drafts")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("salesperson", session.user.salespersonName)
+    .maybeSingle();
+
+  if (draftLookupError) {
+    console.error("Failed to resolve cart draft for clear-all", draftLookupError);
+    return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
+  }
+
+  if (draft?.id) {
+    const { data: photos, error: listPhotosError } = await supabaseAdmin
+      .from("credit_request_photos")
+      .select("id,storage_path")
+      .eq("draft_id", draft.id);
+
+    if (listPhotosError) {
+      console.error("Failed to load cart photos during clear-all", listPhotosError);
+      return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
+    }
+
+    const storagePaths = (photos ?? [])
+      .map((photo) => photo.storage_path)
+      .filter((storagePath): storagePath is string => Boolean(storagePath));
+
+    if (storagePaths.length > 0) {
+      const { error: storageDeleteError } = await supabaseAdmin.storage.from(PHOTO_BUCKET).remove(storagePaths);
+      if (storageDeleteError) {
+        console.error("Failed to remove cart photos from storage during clear-all", storageDeleteError);
+        return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
+      }
+    }
+
+    const { error: photoRowsDeleteError } = await supabaseAdmin
+      .from("credit_request_photos")
+      .delete()
+      .eq("draft_id", draft.id);
+
+    if (photoRowsDeleteError) {
+      console.error("Failed to delete cart photo mappings during clear-all", photoRowsDeleteError);
+      return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
+    }
+
+    const { error: draftDeleteError } = await supabaseAdmin
+      .from("credit_request_cart_drafts")
+      .delete()
+      .eq("id", draft.id)
+      .eq("user_id", userId)
+      .eq("salesperson", session.user.salespersonName);
+
+    if (draftDeleteError) {
+      console.error("Failed to delete cart draft during clear-all", draftDeleteError);
+      return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
+    }
   }
 
   return Response.json({ ok: true });
