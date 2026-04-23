@@ -29,6 +29,7 @@ export async function ensureCartDraftId({
   salesperson: string;
 }): Promise<string> {
   const supabaseAdmin = getSupabaseAdmin();
+  const now = new Date().toISOString();
 
   const { data, error } = await supabaseAdmin
     .from("credit_request_cart_drafts")
@@ -36,7 +37,8 @@ export async function ensureCartDraftId({
       {
         user_id: userId,
         salesperson,
-        last_used_at: new Date().toISOString(),
+        updated_at: now,
+        last_used_at: now,
       },
       { onConflict: "user_id,salesperson", ignoreDuplicates: false },
     )

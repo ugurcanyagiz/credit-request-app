@@ -37,6 +37,7 @@ export function GlobalCartWidget() {
   const [pictures, setPictures] = useState<CartPhoto[]>([]);
   const [selectedPicture, setSelectedPicture] = useState<CartPhoto | null>(null);
   const [isUploadingPictures, setIsUploadingPictures] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccessMessage, setSendSuccessMessage] = useState<string | null>(null);
@@ -77,11 +78,13 @@ export function GlobalCartWidget() {
     }
 
     if (!response.ok) {
+      setPhotoError("Unable to load saved photos.");
       return;
     }
 
     const payload = (await response.json()) as { photos?: CartPhoto[] };
     setPictures(payload.photos ?? []);
+    setPhotoError(null);
     setAuthorized(true);
   }, []);
 
@@ -109,7 +112,7 @@ export function GlobalCartWidget() {
       return;
     }
 
-    setSendError(null);
+    setPhotoError(null);
     setSendSuccessMessage(null);
     setDraftData(null);
     setCopiedText(false);
@@ -128,13 +131,15 @@ export function GlobalCartWidget() {
 
       const payload = (await response.json()) as { photos?: CartPhoto[]; error?: string };
       if (!response.ok) {
-        setSendError(payload.error ?? "Failed to upload photos.");
+        setPhotoError(payload.error ?? "Failed to upload photos.");
         return;
       }
 
-      setPictures((previousPictures) => [...(payload.photos ?? []), ...previousPictures]);
+      if (payload.photos?.length) {
+        await loadPhotos();
+      }
     } catch {
-      setSendError("Failed to upload photos.");
+      setPhotoError("Failed to upload photos.");
     } finally {
       setIsUploadingPictures(false);
     }
@@ -149,10 +154,11 @@ export function GlobalCartWidget() {
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-      setSendError(payload?.error ?? "Failed to remove photo.");
+      setPhotoError(payload?.error ?? "Failed to remove photo.");
       return;
     }
 
+    setPhotoError(null);
     setPictures((previousPictures) => previousPictures.filter((picture) => picture.id !== photoId));
     setSelectedPicture((currentPicture) => (currentPicture?.id === photoId ? null : currentPicture));
   }
@@ -244,7 +250,10 @@ export function GlobalCartWidget() {
     <>
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setIsOpen(true);
+          void loadPhotos();
+        }}
         className="fixed right-4 top-4 z-40 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
       >
         Cart ({items.length})
@@ -355,14 +364,19 @@ export function GlobalCartWidget() {
                 </div>
 
                 <div className="mt-4 min-h-14 rounded-lg border border-dashed border-slate-300 bg-white p-3">
-                  {pictures.length > 0 ? (
-                    <div className="flex flex-wrap gap-3">
+                  {isUploadingPictures ? (
+                    <p className="text-xs text-slate-500">Uploading photo evidence...</p>
+                  ) : pictures.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                       {pictures.map((picture) => (
-                        <div key={picture.id} className="relative h-24 w-24 overflow-hidden rounded-md border border-slate-300">
+                        <div
+                          key={picture.id}
+                          className="group relative overflow-hidden rounded-md border border-slate-300 bg-slate-100 shadow-sm"
+                        >
                           <button
                             type="button"
                             onClick={() => void removePicture(picture.id)}
-                            className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white"
+                            className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/90 text-[10px] text-white shadow transition hover:bg-slate-900"
                             aria-label={`Remove ${picture.fileName}`}
                           >
                             ✕
@@ -370,24 +384,35 @@ export function GlobalCartWidget() {
                           <button
                             type="button"
                             onClick={() => setSelectedPicture(picture)}
-                            className="block h-full w-full"
+                            className="block aspect-square w-full"
                             aria-label={`Preview ${picture.fileName}`}
                           >
                             <Image
                               src={picture.previewUrl ?? picture.publicUrl}
                               alt={picture.fileName}
-                              width={96}
-                              height={96}
-                              className="h-full w-full object-cover"
+                              width={256}
+                              height={256}
+                              unoptimized
+                              className="h-full w-full object-cover transition duration-150 group-hover:scale-[1.02]"
                             />
                           </button>
+                          <p className="truncate border-t border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-600">
+                            {picture.fileName}
+                          </p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-500">No photos uploaded.</p>
+                    <p className="text-xs text-slate-500">
+                      No photos uploaded yet. Click <strong>Add Photos</strong> to attach evidence.
+                    </p>
                   )}
                 </div>
+                {photoError ? (
+                  <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    {photoError}
+                  </p>
+                ) : null}
               </div>
 
               {draftData ? (
@@ -446,7 +471,7 @@ export function GlobalCartWidget() {
                   ✕
                 </button>
                 <Image
-                  src={selectedPicture.previewUrl ?? selectedPicture.publicUrl}
+                  src={selectedPicture.publicUrl}
                   alt={selectedPicture.fileName}
                   width={1280}
                   height={1280}
