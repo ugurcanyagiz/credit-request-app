@@ -6,31 +6,24 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This app requires Supabase and authentication variables used by existing flows.
 
-## Learn More
+For the credit request email delivery flow, configure the following server-side variables in local `.env` and Vercel project settings:
 
-To learn more about Next.js, take a look at the following resources:
+- `RESEND_API_KEY` - API key for your Resend account.
+- `CREDIT_REQUEST_FROM_EMAIL` - Verified sender (for example `Credit Request <no-reply@yourdomain.com>`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The credit request email recipient is fixed to `credit@turkanafood.com` in the server route.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Credit Request Email Flow
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Cart items are reviewed in the Cart modal and sent via `POST /api/credit-request/send`.
+- Email HTML is generated server-side with a business table layout and summary fields.
+- Uploaded cart photos are attached to the email as file attachments.
+- Sensitive keys are not exposed to the browser.

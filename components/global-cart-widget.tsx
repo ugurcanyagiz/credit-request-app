@@ -10,11 +10,20 @@ type CartItem = {
   invoice_no: string;
   item_no: string;
   item_descp: string;
+  quantity: number;
+  sales_amount: number;
+  piece_price: number;
   sales_batch_number: string | null;
   sales_lot_no: string | null;
   credit_type: "case" | "piece";
   credit_amount: number;
   created_at: string;
+};
+
+type AttachmentPayload = {
+  filename: string;
+  contentType: string;
+  base64Data: string;
 };
 
 export function GlobalCartWidget() {
@@ -38,6 +47,17 @@ export function GlobalCartWidget() {
     () => items.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0),
     [items],
   );
+
+  const uniqueCustomers = useMemo(
+    () => [...new Set(cartRows.map((item) => item.customer_code))],
+    [cartRows],
+  );
+
+  const uniqueInvoices = useMemo(
+    () => [...new Set(cartRows.map((item) => item.invoice_no))],
+    [cartRows],
+  );
+
   const picturePreviews = useMemo(
     () =>
       pictures.map((picture) => ({
@@ -93,6 +113,42 @@ export function GlobalCartWidget() {
     setPictures((previousPictures) => previousPictures.filter((_, pictureIndex) => pictureIndex !== index));
   }
 
+  async function fileToBase64(file: File) {
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          const [, base64 = ""] = reader.result.split(",");
+          resolve(base64);
+          return;
+        }
+        reject(new Error("Unable to read image file."));
+      };
+      reader.onerror = () => {
+        reject(new Error("Unable to read image file."));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function buildAttachments() {
+    const attachments: AttachmentPayload[] = [];
+
+    for (const picture of pictures) {
+      if (picture.size > 5 * 1024 * 1024) {
+        throw new Error(`Photo ${picture.name} exceeds 5MB limit.`);
+      }
+
+      attachments.push({
+        filename: picture.name,
+        contentType: picture.type || "application/octet-stream",
+        base64Data: await fileToBase64(picture),
+      });
+    }
+
+    return attachments;
+  }
+
   async function sendCreditRequestEmail() {
     if (items.length === 0 || isSending) {
       return;
@@ -102,102 +158,30 @@ export function GlobalCartWidget() {
     setSendError(null);
     setSendSuccessMessage(null);
 
-    const headers = ["Customer Code", "Invoice", "Item", "Description", "Type", "Amount", "Batch No", "Lot No"];
-    const rows = cartRows.map((item) => ({
-      customerCode: item.customer_code,
-      invoiceNo: item.invoice_no,
-      itemNo: item.item_no,
-      description: item.item_descp,
-      type: item.credit_type,
-      amount: Number(item.credit_amount).toFixed(2),
-      batchNo: item.sales_batch_number ?? "-",
-      lotNo: item.sales_lot_no ?? "-",
-    }));
-
-    const escapeHtml = (value: string) =>
-      value
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
-
-    const headerCells = headers
-      .map(
-        (header) =>
-          `<th style="border:1px solid #2f2f2f;background-color:#a9a9a9;color:#111827;padding:7px 10px;font-weight:700;text-align:center;line-height:1.25;">${escapeHtml(header)}</th>`,
-      )
-      .join("");
-
-    const bodyRows = rows
-      .map(
-        (row) =>
-          `<tr>` +
-          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.customerCode)}</td>` +
-          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.invoiceNo)}</td>` +
-          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.itemNo)}</td>` +
-          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:left;">${escapeHtml(row.description)}</td>` +
-          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.type)}</td>` +
-          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:right;">${escapeHtml(row.amount)}</td>` +
-          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.batchNo)}</td>` +
-          `<td style="border:1px solid #2f2f2f;padding:5px 8px;text-align:center;">${escapeHtml(row.lotNo)}</td>` +
-          `</tr>`,
-      )
-      .join("");
-
-    const emailHtml =
-      `<!doctype html><html><body style="font-family:Calibri,Arial,sans-serif;color:#111827;">` +
-      `<table style="border-collapse:collapse;width:100%;font-size:13px;border:1px solid #2f2f2f;" cellspacing="0" cellpadding="0">` +
-      `<thead><tr>${headerCells}</tr></thead>` +
-      `<tbody>${bodyRows}</tbody>` +
-      `<tfoot><tr>` +
-      `<td colspan="5" style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:right;">Total Amount</td>` +
-      `<td style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:right;">${escapeHtml(totalAmount.toFixed(2))}</td>` +
-      `<td style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:center;">-</td>` +
-      `<td style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:center;">-</td>` +
-      `</tr></tfoot>` +
-      `</table>`;
-
-    async function fileToDataUrl(file: File) {
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === "string") {
-            resolve(reader.result);
-            return;
-          }
-          reject(new Error("Unable to read image file."));
-        };
-        reader.onerror = () => {
-          reject(new Error("Unable to read image file."));
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
     try {
-      const pictureBlocks =
-        pictures.length > 0
-          ? (
-              await Promise.all(
-                pictures.map(async (picture) => {
-                  const imageSource = await fileToDataUrl(picture);
-                  return (
-                    `<div style="margin-top:12px;">` +
-                    `<img src="${imageSource}" alt="${escapeHtml(picture.name)}" style="max-width:100%;height:auto;border:1px solid #2f2f2f;display:block;" />` +
-                    `</div>`
-                  );
-                }),
-              )
-            ).join("")
-          : "";
+      const attachments = await buildAttachments();
 
-      const emailHtmlWithPictures = `${emailHtml}${pictureBlocks}</body></html>`;
-      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(emailHtmlWithPictures)}`;
-      window.location.href = mailtoUrl;
-      setSendSuccessMessage("Email draft generated.");
-    } catch {
-      setSendError("Failed to send credit request email.");
+      const response = await fetch("/api/credit-request/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: cartRows,
+          attachments,
+        }),
+      });
+
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to send credit request email.");
+      }
+
+      setSendSuccessMessage("Credit request email sent successfully to credit@turkanafood.com.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to send credit request email.";
+      setSendError(message);
     } finally {
       setIsSending(false);
     }
@@ -237,73 +221,96 @@ export function GlobalCartWidget() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed right-4 top-4 z-40 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm shadow-sm hover:bg-zinc-50"
+        className="fixed right-4 top-4 z-40 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
       >
-        🛒 Cart ({items.length})
+        Cart ({items.length})
       </button>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-5xl rounded-lg bg-white p-5 shadow-xl">
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">Cart</h3>
-                <p className="text-sm text-zinc-600">Total amount: {totalAmount.toFixed(2)}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={sendCreditRequestEmail}
-                  disabled={items.length === 0 || isSending}
-                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSending ? "Sending..." : "Send Credit Request"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs"
-                >
-                  Close
-                </button>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 md:p-8">
+          <div className="mx-auto w-full max-w-7xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-200 px-6 py-5 md:px-8">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="text-2xl font-semibold text-slate-900">Credit Request Cart</h3>
+                  <p className="mt-1 text-sm text-slate-500">Review details carefully before submitting.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={sendCreditRequestEmail}
+                    disabled={items.length === 0 || isSending}
+                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSending ? "Sending..." : "Send Credit Request"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
 
-            {items.length === 0 ? (
-              <p className="text-sm text-zinc-600">No items in cart yet.</p>
-            ) : (
-              <>
-                <div className="overflow-x-auto rounded-md border border-zinc-200">
+            <div className="space-y-6 px-6 py-6 md:px-8">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Customer Information</p>
+                  <p className="mt-2 text-sm text-slate-700">{uniqueCustomers.join(", ") || "-"}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoice Information</p>
+                  <p className="mt-2 text-sm text-slate-700">{uniqueInvoices.join(", ") || "-"}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Credit Summary</p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    Rows: <strong>{cartRows.length}</strong> · Total: <strong>{totalAmount.toFixed(2)}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {items.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
+                  No items in cart yet.
+                </p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-zinc-50 text-left">
+                    <thead className="bg-slate-100 text-slate-700">
                       <tr>
-                        <th className="px-3 py-2 font-medium">Customer</th>
-                        <th className="px-3 py-2 font-medium">Invoice</th>
-                        <th className="px-3 py-2 font-medium">Item</th>
-                        <th className="px-3 py-2 font-medium">Description</th>
-                        <th className="px-3 py-2 font-medium">Type</th>
-                        <th className="px-3 py-2 font-medium">Amount</th>
-                        <th className="px-3 py-2 font-medium">Batch No</th>
-                        <th className="px-3 py-2 font-medium">Lot No</th>
-                        <th className="px-3 py-2 font-medium">Action</th>
+                        <th className="px-3 py-3 text-left font-semibold">Customer Code</th>
+                        <th className="px-3 py-3 text-left font-semibold">Invoice No</th>
+                        <th className="px-3 py-3 text-left font-semibold">Item No</th>
+                        <th className="px-3 py-3 text-left font-semibold">Item Description</th>
+                        <th className="px-3 py-3 text-right font-semibold">Qty</th>
+                        <th className="px-3 py-3 text-right font-semibold">Sales Amount</th>
+                        <th className="px-3 py-3 text-right font-semibold">Piece Price</th>
+                        <th className="px-3 py-3 text-center font-semibold">Credit Type</th>
+                        <th className="px-3 py-3 text-right font-semibold">Credit Amount</th>
+                        <th className="px-3 py-3 text-center font-semibold">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {cartRows.map((item) => (
-                        <tr key={item.id} className="border-t border-zinc-200">
-                          <td className="px-3 py-2">{item.customer_code}</td>
-                          <td className="px-3 py-2">{item.invoice_no}</td>
-                          <td className="px-3 py-2">{item.item_no}</td>
-                          <td className="px-3 py-2">{item.item_descp}</td>
-                          <td className="px-3 py-2">{item.credit_type}</td>
-                          <td className="px-3 py-2">{Number(item.credit_amount).toFixed(2)}</td>
-                          <td className="px-3 py-2">{item.sales_batch_number ?? "-"}</td>
-                          <td className="px-3 py-2">{item.sales_lot_no ?? "-"}</td>
-                          <td className="px-3 py-2">
+                        <tr key={item.id} className="border-t border-slate-200 text-slate-700">
+                          <td className="px-3 py-3">{item.customer_code}</td>
+                          <td className="px-3 py-3">{item.invoice_no}</td>
+                          <td className="px-3 py-3">{item.item_no}</td>
+                          <td className="px-3 py-3">{item.item_descp}</td>
+                          <td className="px-3 py-3 text-right">{item.quantity ?? 0}</td>
+                          <td className="px-3 py-3 text-right">{Number(item.sales_amount ?? 0).toFixed(2)}</td>
+                          <td className="px-3 py-3 text-right">{Number(item.piece_price ?? 0).toFixed(2)}</td>
+                          <td className="px-3 py-3 text-center">{item.credit_type}</td>
+                          <td className="px-3 py-3 text-right">{Number(item.credit_amount).toFixed(2)}</td>
+                          <td className="px-3 py-3 text-center">
                             <button
                               type="button"
                               onClick={() => void removeItem(item.id)}
-                              className="rounded-md border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                              className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                             >
                               Remove
                             </button>
@@ -313,8 +320,16 @@ export function GlobalCartWidget() {
                     </tbody>
                   </table>
                 </div>
+              )}
 
-                <div className="mt-6 flex flex-col items-center gap-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">Photo Attachments</p>
+                    <p className="text-xs text-slate-500">
+                      Upload photo evidence (max 5MB per file). Files will be included as email attachments.
+                    </p>
+                  </div>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -326,52 +341,54 @@ export function GlobalCartWidget() {
                   <button
                     type="button"
                     onClick={onPickPictures}
-                    className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-300 text-3xl hover:bg-zinc-50"
-                    aria-label="Add Pictures"
-                    title="Add Pictures"
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
                   >
-                    📷
+                    Add Photos
                   </button>
-
-                  <div className="w-full rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                    {pictures.length > 0 ? (
-                      <div className="flex flex-wrap gap-3">
-                        {picturePreviews.map((picturePreview, index) => (
-                          <div
-                            key={`${picturePreview.key}-${index}`}
-                            className="relative h-20 w-20 overflow-hidden rounded-md border border-zinc-300 bg-white"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => removePicture(index)}
-                              className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
-                              aria-label={`Remove ${picturePreview.name}`}
-                            >
-                              ✕
-                            </button>
-                            <Image
-                              src={picturePreview.url}
-                              alt={picturePreview.name}
-                              width={80}
-                              height={80}
-                              unoptimized
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-zinc-600">No picture selected</p>
-                    )}
-                  </div>
                 </div>
 
-                {sendError ? <p className="mt-2 text-xs text-red-600">{sendError}</p> : null}
-                {sendSuccessMessage ? (
-                  <p className="mt-2 text-xs text-emerald-600">{sendSuccessMessage}</p>
-                ) : null}
-              </>
-            )}
+                <div className="mt-4 min-h-14 rounded-lg border border-dashed border-slate-300 bg-white p-3">
+                  {pictures.length > 0 ? (
+                    <div className="flex flex-wrap gap-3">
+                      {picturePreviews.map((picturePreview, index) => (
+                        <div
+                          key={`${picturePreview.key}-${index}`}
+                          className="relative h-24 w-24 overflow-hidden rounded-md border border-slate-300"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => removePicture(index)}
+                            className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white"
+                            aria-label={`Remove ${picturePreview.name}`}
+                          >
+                            ✕
+                          </button>
+                          <Image
+                            src={picturePreview.url}
+                            alt={picturePreview.name}
+                            width={96}
+                            height={96}
+                            unoptimized
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">No photos uploaded.</p>
+                  )}
+                </div>
+              </div>
+
+              {sendError ? (
+                <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{sendError}</p>
+              ) : null}
+              {sendSuccessMessage ? (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  {sendSuccessMessage}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}
