@@ -20,6 +20,14 @@ export function GlobalCartWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [authorized, setAuthorized] = useState(true);
 
+  const NOTE_ITEM_NO = "NOT_FROM_RECENT_INVOICES";
+
+  const cartRows = useMemo(() => {
+    const regularItems = items.filter((item) => item.item_no !== NOTE_ITEM_NO);
+    const noteItems = items.filter((item) => item.item_no === NOTE_ITEM_NO);
+    return [...regularItems, ...noteItems];
+  }, [items]);
+
   const totalAmount = useMemo(
     () => items.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0),
     [items],
@@ -70,7 +78,7 @@ export function GlobalCartWidget() {
       "Lot No",
     ];
 
-    const rows = items.map((item) => [
+    const rows = cartRows.map((item) => [
       item.customer_code,
       item.invoice_no,
       item.item_no,
@@ -173,27 +181,31 @@ export function GlobalCartWidget() {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => (
-                      <tr key={item.id} className="border-t border-zinc-200">
-                        <td className="px-3 py-2">{item.customer_code}</td>
-                        <td className="px-3 py-2">{item.invoice_no}</td>
-                        <td className="px-3 py-2">{item.item_no}</td>
-                        <td className="px-3 py-2">{item.item_descp}</td>
-                        <td className="px-3 py-2">{item.credit_type}</td>
-                        <td className="px-3 py-2">{Number(item.credit_amount).toFixed(2)}</td>
-                        <td className="px-3 py-2">{item.sales_batch_number ?? "-"}</td>
-                        <td className="px-3 py-2">{item.sales_lot_no ?? "-"}</td>
-                        <td className="px-3 py-2">
-                          <button
-                            type="button"
-                            onClick={() => void removeItem(item.id)}
-                            className="rounded-md border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {cartRows.map((item) => {
+                      const isNote = item.item_no === NOTE_ITEM_NO;
+
+                      return (
+                        <tr key={item.id} className="border-t border-zinc-200">
+                          <td className="px-3 py-2">{item.customer_code}</td>
+                          <td className="px-3 py-2">{item.invoice_no}</td>
+                          <td className="px-3 py-2">{isNote ? "Note" : item.item_no}</td>
+                          <td className="px-3 py-2">{item.item_descp}</td>
+                          <td className="px-3 py-2">{isNote ? "-" : item.credit_type}</td>
+                          <td className="px-3 py-2">{isNote ? "-" : Number(item.credit_amount).toFixed(2)}</td>
+                          <td className="px-3 py-2">{item.sales_batch_number ?? "-"}</td>
+                          <td className="px-3 py-2">{item.sales_lot_no ?? "-"}</td>
+                          <td className="px-3 py-2">
+                            <button
+                              type="button"
+                              onClick={() => void removeItem(item.id)}
+                              className="rounded-md border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
