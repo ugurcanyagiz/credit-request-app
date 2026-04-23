@@ -375,7 +375,6 @@ export function GlobalCartWidget() {
                             alt={picture.fileName}
                             width={96}
                             height={96}
-                            unoptimized
                             className="h-full w-full object-cover"
                           />
                         </div>
