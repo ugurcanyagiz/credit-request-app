@@ -21,12 +21,19 @@ type DraftResponse = {
   }>;
 };
 
+type CartPhoto = {
+  fileName: string;
+  publicUrl: string;
+  storagePath: string;
+  createdAt?: string;
+};
 
 export function GlobalCartWidget() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [authorized, setAuthorized] = useState(true);
-  const [pictures, setPictures] = useState<File[]>([]);
+  const [pictures, setPictures] = useState<CartPhoto[]>([]);
+  const [isUploadingPictures, setIsUploadingPictures] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccessMessage, setSendSuccessMessage] = useState<string | null>(null);
@@ -42,16 +49,6 @@ export function GlobalCartWidget() {
   }, [items]);
 
 
-  const picturePreviews = useMemo(
-    () =>
-      pictures.map((picture) => ({
-        key: `${picture.name}-${picture.lastModified}-${picture.size}`,
-        name: picture.name,
-        url: URL.createObjectURL(picture),
-      })),
-    [pictures],
-  );
-
   const loadCart = useCallback(async () => {
     const response = await fetch("/api/cart", { cache: "no-store" });
 
@@ -66,6 +63,23 @@ export function GlobalCartWidget() {
 
     const payload = (await response.json()) as { items?: CartItem[] };
     setItems(payload.items ?? []);
+    setAuthorized(true);
+  }, []);
+
+  const loadPhotos = useCallback(async () => {
+    const response = await fetch("/api/cart/photos", { cache: "no-store" });
+
+    if (response.status === 401) {
+      setAuthorized(false);
+      return;
+    }
+
+    if (!response.ok) {
+      return;
+    }
+
+    const payload = (await response.json()) as { photos?: CartPhoto[] };
+    setPictures(payload.photos ?? []);
     setAuthorized(true);
   }, []);
 
@@ -85,18 +99,59 @@ export function GlobalCartWidget() {
     fileInputRef.current?.click();
   }
 
-  function onPicturesSelected(event: ChangeEvent<HTMLInputElement>) {
+  async function onPicturesSelected(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-    setPictures((previousPictures) => [...previousPictures, ...files]);
+    event.target.value = "";
+
+    if (files.length === 0) {
+      return;
+    }
+
     setSendError(null);
     setSendSuccessMessage(null);
     setDraftData(null);
     setCopiedText(false);
-    event.target.value = "";
+    setIsUploadingPictures(true);
+
+    try {
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append("photos", file);
+      });
+
+      const response = await fetch("/api/cart/photos", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json()) as { photos?: CartPhoto[]; error?: string };
+      if (!response.ok) {
+        setSendError(payload.error ?? "Failed to upload photos.");
+        return;
+      }
+
+      setPictures((previousPictures) => [...(payload.photos ?? []), ...previousPictures]);
+    } catch {
+      setSendError("Failed to upload photos.");
+    } finally {
+      setIsUploadingPictures(false);
+    }
   }
 
-  function removePicture(index: number) {
-    setPictures((previousPictures) => previousPictures.filter((_, pictureIndex) => pictureIndex !== index));
+  async function removePicture(storagePath: string) {
+    const response = await fetch("/api/cart/photos", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storagePath }),
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      setSendError(payload?.error ?? "Failed to remove photo.");
+      return;
+    }
+
+    setPictures((previousPictures) => previousPictures.filter((picture) => picture.storagePath !== storagePath));
   }
 
   async function prepareCreditRequestDraft() {
@@ -122,9 +177,7 @@ export function GlobalCartWidget() {
     try {
       const formData = new FormData();
       formData.set("cartRows", JSON.stringify(cartRows));
-      pictures.forEach((picture) => {
-        formData.append("photos", picture);
-      });
+      formData.set("photoRefs", JSON.stringify(pictures));
 
       const response = await fetch("/api/cart/credit-request-draft", {
         method: "POST",
@@ -166,6 +219,7 @@ export function GlobalCartWidget() {
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void loadCart();
+      void loadPhotos();
     }, 0);
 
     function handleUpdated() {
@@ -178,15 +232,7 @@ export function GlobalCartWidget() {
       window.clearTimeout(timeoutId);
       window.removeEventListener("cart-updated", handleUpdated);
     };
-  }, [loadCart]);
-
-  useEffect(() => {
-    return () => {
-      picturePreviews.forEach((picturePreview) => {
-        URL.revokeObjectURL(picturePreview.url);
-      });
-    };
-  }, [picturePreviews]);
+  }, [loadCart, loadPhotos]);
 
   if (!authorized) {
     return null;
@@ -292,37 +338,40 @@ export function GlobalCartWidget() {
                     type="file"
                     multiple
                     accept="image/*"
-                    onChange={onPicturesSelected}
+                    onChange={(event) => {
+                      void onPicturesSelected(event);
+                    }}
                     className="hidden"
                   />
                   <button
                     type="button"
                     onClick={onPickPictures}
+                    disabled={isUploadingPictures}
                     className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
                   >
-                    Add Photos
+                    {isUploadingPictures ? "Uploading..." : "Add Photos"}
                   </button>
                 </div>
 
                 <div className="mt-4 min-h-14 rounded-lg border border-dashed border-slate-300 bg-white p-3">
                   {pictures.length > 0 ? (
                     <div className="flex flex-wrap gap-3">
-                      {picturePreviews.map((picturePreview, index) => (
+                      {pictures.map((picture) => (
                         <div
-                          key={`${picturePreview.key}-${index}`}
+                          key={picture.storagePath}
                           className="relative h-24 w-24 overflow-hidden rounded-md border border-slate-300"
                         >
                           <button
                             type="button"
-                            onClick={() => removePicture(index)}
+                            onClick={() => void removePicture(picture.storagePath)}
                             className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white"
-                            aria-label={`Remove ${picturePreview.name}`}
+                            aria-label={`Remove ${picture.fileName}`}
                           >
                             ✕
                           </button>
                           <Image
-                            src={picturePreview.url}
-                            alt={picturePreview.name}
+                            src={picture.publicUrl}
+                            alt={picture.fileName}
                             width={96}
                             height={96}
                             unoptimized
