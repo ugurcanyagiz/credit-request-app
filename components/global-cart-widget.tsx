@@ -106,7 +106,7 @@ export function GlobalCartWidget() {
       "Customer Code",
       "Invoice",
       "Item",
-      "Descrp",
+      "Description",
       "Type",
       "Amount",
       "Batch No",
@@ -124,50 +124,99 @@ export function GlobalCartWidget() {
       item.sales_lot_no ?? "-",
     ]);
 
+    const columnWidths = headers.map((header, index) =>
+      Math.max(header.length, ...rows.map((row) => String(row[index]).length)),
+    );
+
+    function formatTableRow(row: string[]) {
+      return `| ${row.map((cell, index) => String(cell).padEnd(columnWidths[index], " ")).join(" | ")} |`;
+    }
+
+    const tableDivider = `|-${columnWidths.map((width) => "-".repeat(width)).join("-|-")}-|`;
+    const formattedTable = [
+      formatTableRow(headers),
+      tableDivider,
+      ...rows.map((row) => formatTableRow(row)),
+    ];
+
+    function escapeHtml(value: string) {
+      return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    const htmlTable = `
+      <table style="border-collapse:collapse;border:1px solid #3f3f46;font-family:Calibri, Arial, sans-serif;font-size:13px;color:#18181b;">
+        <thead>
+          <tr>
+            ${headers
+              .map(
+                (header) =>
+                  `<th style="border:1px solid #3f3f46;background-color:#bfbfbf;padding:8px 10px;text-align:center;font-weight:700;">${escapeHtml(header)}</th>`,
+              )
+              .join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              (row) =>
+                `<tr>${row
+                  .map(
+                    (cell) =>
+                      `<td style="border:1px solid #3f3f46;background-color:#f8fafc;padding:6px 10px;text-align:center;">${escapeHtml(String(cell))}</td>`,
+                  )
+                  .join("")}</tr>`,
+            )
+            .join("")}
+          <tr>
+            <td colspan="${headers.length - 1}" style="border:1px solid #3f3f46;background-color:#e4e4e7;padding:8px 10px;text-align:right;font-weight:700;">Total Amount</td>
+            <td style="border:1px solid #3f3f46;background-color:#e4e4e7;padding:8px 10px;text-align:center;font-weight:700;">${escapeHtml(totalAmount.toFixed(2))}</td>
+          </tr>
+        </tbody>
+      </table>
+    `.trim();
+
     const lines = [
       "Credit Request",
       "",
-      headers.join(" | "),
-      ...rows.map((row) => row.join(" | ")),
+      "Cart Details (Excel-ready professional table format):",
+      ...formattedTable,
       "",
       `Total Amount: ${totalAmount.toFixed(2)}`,
     ];
 
     try {
-      const canShareFiles =
+      if (
         typeof navigator !== "undefined" &&
-        typeof navigator.canShare === "function" &&
-        navigator.canShare({ files: pictures }) &&
-        typeof navigator.share === "function";
-
-      if (canShareFiles && pictures.length > 0) {
-        await navigator.share({
-          title: "Credit Request",
-          text: lines.join("\n"),
-          files: pictures,
+        typeof navigator.clipboard !== "undefined" &&
+        typeof navigator.clipboard.write === "function" &&
+        typeof ClipboardItem !== "undefined"
+      ) {
+        const clipboardItem = new ClipboardItem({
+          "text/html": new Blob([htmlTable], { type: "text/html" }),
+          "text/plain": new Blob([lines.join("\n")], { type: "text/plain" }),
         });
-      } else {
-        const body =
-          pictures.length > 0
-            ? `${lines.join("\n")}\n\nSelected Pictures:\n${pictures.map((file) => `- ${file.name}`).join("\n")}`
-            : lines.join("\n");
-        const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailtoUrl;
-
-        if (pictures.length > 0) {
-          setSendError(
-            "Your browser does not support file attachments in share mode. Please attach selected pictures manually in your email client.",
-          );
-          return;
-        }
+        await navigator.clipboard.write([clipboardItem]);
       }
 
+      const body =
+        pictures.length > 0
+          ? `Dear Team,\n\nPlease find the credit request details below.\n\nThe formatted table has been copied to your clipboard. Paste it into the email body (Ctrl/Cmd + V).\n\nSelected Pictures:\n${pictures.map((file) => `- ${file.name}`).join("\n")}`
+          : "Dear Team,\n\nPlease find the credit request details below.\n\nThe formatted table has been copied to your clipboard. Paste it into the email body (Ctrl/Cmd + V).";
+
+      const mailtoUrl = `mailto:credit@turkanafood.com?subject=${encodeURIComponent("Credit Request")}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoUrl;
+
       if (pictures.length > 0) {
-        setSendSuccessMessage("Credit request prepared with selected pictures.");
+        setSendError("Formatted table copied. Please paste it into email body and attach selected pictures manually.");
         return;
       }
 
-      setSendSuccessMessage("Credit request email prepared successfully.");
+      setSendSuccessMessage("Credit request draft prepared. Formatted table copied to clipboard.");
     } catch {
       setSendError("Failed to send credit request email.");
     } finally {
