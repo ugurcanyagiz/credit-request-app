@@ -138,23 +138,23 @@ export function GlobalCartWidget() {
         }
         return centerCell(content, width);
       });
-      return `│ ${rowCells.join(" │ ")} │`;
+      return `| ${rowCells.join(" | ")} |`;
     }
 
-    function drawLine(left: string, middle: string, right: string, fill: string) {
-      return `${left}${columnWidths.map((width) => fill.repeat(width + 2)).join(middle)}${right}`;
+    function drawLine(left: string, middle: string, right: string) {
+      return `${left}${columnWidths.map((width) => "-".repeat(width + 2)).join(middle)}${right}`;
     }
 
-    const topBorder = drawLine("┌", "┬", "┐", "─");
-    const middleBorder = drawLine("├", "┼", "┤", "─");
-    const bottomBorder = drawLine("└", "┴", "┘", "─");
+    const topBorder = drawLine("+", "+", "+");
+    const middleBorder = drawLine("+", "+", "+");
+    const bottomBorder = drawLine("+", "+", "+");
     const headerRow = renderRow(headers, ["center", "center", "center", "center", "center", "center", "center", "center"]);
     const dataRows = rows.map((row) =>
       renderRow(row, ["center", "center", "center", "left", "center", "right", "center", "center"]),
     );
     const totalLabel = "Total Amount";
     const leftSpanWidth = columnWidths.slice(0, 5).reduce((sum, width) => sum + width, 0) + 3 * 4;
-    const totalRow = `│ ${totalLabel.padEnd(leftSpanWidth, " ")} │ ${String(totalAmount.toFixed(2)).padStart(columnWidths[5], " ")} │ ${"-".padStart(columnWidths[6], " ")} │ ${"-".padStart(columnWidths[7], " ")} │`;
+    const totalRow = `| ${totalLabel.padEnd(leftSpanWidth, " ")} | ${String(totalAmount.toFixed(2)).padStart(columnWidths[5], " ")} | ${"-".padStart(columnWidths[6], " ")} | ${"-".padStart(columnWidths[7], " ")} |`;
     const emailTableText = [topBorder, headerRow, middleBorder, ...dataRows, middleBorder, totalRow, bottomBorder].join("\n");
 
     try {
