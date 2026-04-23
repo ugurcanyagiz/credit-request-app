@@ -156,16 +156,51 @@ export function GlobalCartWidget() {
       `<td style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:center;">-</td>` +
       `<td style="border:1px solid #2f2f2f;background-color:#e5e7eb;padding:7px 8px;font-weight:700;text-align:center;">-</td>` +
       `</tr></tfoot>` +
-      `</table></body></html>`;
+      `</table>`;
+
+    async function fileToDataUrl(file: File) {
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            resolve(reader.result);
+            return;
+          }
+          reject(new Error("Unable to read image file."));
+        };
+        reader.onerror = () => {
+          reject(new Error("Unable to read image file."));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
 
     try {
+      const pictureBlocks =
+        pictures.length > 0
+          ? (
+              await Promise.all(
+                pictures.map(async (picture) => {
+                  const imageSource = await fileToDataUrl(picture);
+                  return (
+                    `<div style="margin-top:12px;">` +
+                    `<img src="${imageSource}" alt="${escapeHtml(picture.name)}" style="max-width:100%;height:auto;border:1px solid #2f2f2f;display:block;" />` +
+                    `</div>`
+                  );
+                }),
+              )
+            ).join("")
+          : "";
+
+      const emailHtmlWithPictures = `${emailHtml}${pictureBlocks}</body></html>`;
+
       const emlContent = [
         "To: credit@turkanafood.com",
         "Subject: Credit Request",
         "MIME-Version: 1.0",
         "Content-Type: text/html; charset=UTF-8",
         "",
-        emailHtml,
+        emailHtmlWithPictures,
       ].join("\r\n");
 
       const blob = new Blob([emlContent], { type: "message/rfc822;charset=utf-8" });
@@ -178,12 +213,7 @@ export function GlobalCartWidget() {
       draftLink.remove();
       URL.revokeObjectURL(draftUrl);
 
-      if (pictures.length > 0) {
-        setSendError("Please attach selected pictures manually before sending the email.");
-        return;
-      }
-
-      setSendSuccessMessage("Professional email draft file generated.");
+      setSendSuccessMessage("Email draft generated.");
     } catch {
       setSendError("Failed to send credit request email.");
     } finally {
