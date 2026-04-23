@@ -68,6 +68,35 @@ function toReasonRowKey(item: CreditRequestCartItem) {
   return `${item.customer_code}::${item.invoice_no}::${item.item_no}`;
 }
 
+function isStandaloneReasonRow(itemDescription: string) {
+  return itemDescription.trim().startsWith("Reason:");
+}
+
+function parseReasonAndDescription(itemDescription: string) {
+  const normalizedDescription = itemDescription.trim();
+
+  if (normalizedDescription.startsWith("Reason:")) {
+    const reason = normalizedDescription.replace(/^Reason:/, "").trim();
+    return { description: "-", reason: reason.length > 0 ? reason : null };
+  }
+
+  const splitOnReason = normalizedDescription.split(/\s*\|\s*Reason:\s*/i);
+  if (splitOnReason.length > 1) {
+    const [descriptionPart, ...reasonParts] = splitOnReason;
+    const reason = reasonParts.join(" | ").trim();
+    return {
+      description: descriptionPart.trim() || "-",
+      reason: reason.length > 0 ? reason : null,
+    };
+  }
+
+  return { description: normalizedDescription || "-", reason: null };
+}
+
+function toReasonRowKey(item: CreditRequestCartItem) {
+  return `${item.customer_code}::${item.invoice_no}::${item.item_no}`;
+}
+
 function toTableRow(columns: string[], widths: number[]) {
   return columns
     .map((value, index) => {
