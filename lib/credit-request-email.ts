@@ -112,6 +112,10 @@ function toTableRow(columns: string[], widths: number[], alignments: TableAlignm
     .join("  ");
 }
 
+function getTableWidths(headers: string[], configuredWidths: number[]) {
+  return headers.map((header, index) => Math.max(header.length, configuredWidths[index]));
+}
+
 function encodeMailtoValue(value: string) {
   return encodeURIComponent(value);
 }
@@ -162,13 +166,10 @@ export function buildCreditRequestDraftText({
     uniqueInvoices.join(", ") || "N/A"
   } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
 
-  const rowWidths = [8, 32, 20, 5, 12, 11] as const;
+  const tableHeaders = ["Item No", "Description", "Reason", "Qty", "Sales Amount", "Piece Price"] as const;
+  const rowWidths = getTableWidths([...tableHeaders], [8, 32, 20, 5, 12, 11]);
   const rowAlignments: TableAlignment[] = ["left", "left", "left", "right", "right", "right"];
-  const headerRow = toTableRow(
-    ["Item No", "Description", "Reason", "Qty", "Sales Amt", "Price"],
-    [...rowWidths],
-    rowAlignments,
-  );
+  const headerRow = toTableRow([...tableHeaders], [...rowWidths], rowAlignments);
   const tableWidth = headerRow.length;
   const dividerRow = "-".repeat(tableWidth);
 
