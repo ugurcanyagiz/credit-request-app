@@ -234,8 +234,7 @@ export function buildCreditRequestDraftText({
           ...uploadedPhotos
             .filter((photo) => Boolean(photo.publicUrl))
             .flatMap((photo, index) => [
-              `Photo ${index + 1}:`,
-              photo.publicUrl,
+              `<a href="${photo.publicUrl}">Photo ${index + 1}</a>`,
               "",
             ]),
           "",
