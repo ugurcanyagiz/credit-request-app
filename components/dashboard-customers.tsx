@@ -13,26 +13,37 @@ export function DashboardCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadCustomers() {
-      const response = await fetch("/api/customers", {
-        cache: "no-store",
-      });
+      try {
+        const response = await fetch("/api/customers", {
+          cache: "no-store",
+        });
 
-      if (!response.ok) {
+        if (!response.ok) {
+          if (isMounted) {
+            setError("Failed to load customers.");
+          }
+          return;
+        }
+
+        const payload = (await response.json()) as { customers?: Customer[] };
+
+        if (isMounted) {
+          setCustomers(payload.customers ?? []);
+        }
+      } catch {
         if (isMounted) {
           setError("Failed to load customers.");
         }
-        return;
-      }
-
-      const payload = (await response.json()) as { customers?: Customer[] };
-
-      if (isMounted) {
-        setCustomers(payload.customers ?? []);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
 
@@ -77,7 +88,10 @@ export function DashboardCustomers() {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <div>
-        <label htmlFor="customer-search" className="mb-1 block text-sm font-medium text-zinc-700">
+        <label
+          htmlFor="customer-search"
+          className="mb-1 block text-sm font-medium text-zinc-700"
+        >
           Search customer
         </label>
         <input
@@ -86,29 +100,48 @@ export function DashboardCustomers() {
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search by customer code or name..."
+          disabled={isLoading}
+          aria-busy={isLoading}
           className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
         />
       </div>
 
-      <ul className="space-y-2">
-        {filteredCustomers.map((customer) => (
-          <li
-            key={customer.customer_code}
-            className="rounded-md border border-zinc-200 text-sm"
-          >
-            <Link
-              href={`/dashboard/customers/${encodeURIComponent(customer.customer_code)}`}
-              className="block px-3 py-2 transition-colors hover:bg-zinc-50"
+      {isLoading ? (
+        <div aria-live="polite" className="space-y-2">
+          <p className="text-xs tracking-wide text-zinc-500">Loading customers…</p>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={`customer-loading-${index}`}
+              className="rounded-md border border-zinc-200 px-3 py-2"
             >
-              <p className="font-medium">{customer.customer_code}</p>
-              <p className="text-zinc-600">{customer.customer_name}</p>
-            </Link>
-          </li>
-        ))}
-      </ul>
+              <div className="h-4 w-24 animate-pulse rounded bg-zinc-200" />
+              <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-zinc-100" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {filteredCustomers.map((customer) => (
+            <li
+              key={customer.customer_code}
+              className="rounded-md border border-zinc-200 text-sm"
+            >
+              <Link
+                href={`/dashboard/customers/${encodeURIComponent(customer.customer_code)}`}
+                className="block px-3 py-2 transition-colors hover:bg-zinc-50"
+              >
+                <p className="font-medium">{customer.customer_code}</p>
+                <p className="text-zinc-600">{customer.customer_name}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      {!error && filteredCustomers.length === 0 ? (
-        <p className="text-sm text-zinc-600">No customers found for this search.</p>
+      {!isLoading && !error && filteredCustomers.length === 0 ? (
+        <p className="text-sm text-zinc-600">
+          No customers found for this search.
+        </p>
       ) : null}
     </section>
   );
