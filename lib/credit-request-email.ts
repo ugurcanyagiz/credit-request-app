@@ -199,14 +199,11 @@ export function buildCreditRequestDraftText({
     "",
     "Please review the credit request details below.",
     "",
-    "CUSTOMER INFORMATION",
     `Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
     "",
-    "INVOICE INFORMATION",
     `Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
     `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
-    "SELECTED ITEMS",
     dividerRow,
     headerRow,
     dividerRow,
@@ -234,7 +231,6 @@ export function buildCreditRequestDraftText({
     "",
     ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
       ? [
-          "PHOTO LINKS",
           ...uploadedPhotos
             .filter((photo) => Boolean(photo.publicUrl))
             .flatMap((photo, index) => [
@@ -245,7 +241,6 @@ export function buildCreditRequestDraftText({
           "",
         ]
       : [
-          "PHOTO LINKS",
           "No hosted photo links available.",
           "",
         ]),
