@@ -63,6 +63,10 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
       return null;
     }
 
+    if (numericCaseCount > selectedItem.quantity) {
+      return null;
+    }
+
     return selectedItem.piece_price * numericCaseCount;
   }, [numericCaseCount, selectedItem]);
 
@@ -106,6 +110,11 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
 
   async function addSelectedItemToCart() {
     if (!selectedItem || autoCreditAmount === null || !Number.isFinite(autoCreditAmount)) {
+      return;
+    }
+
+    if (creditType === "case" && numericCaseCount > selectedItem.quantity) {
+      setSubmitError(`Case quantity cannot be greater than ${selectedItem.quantity}.`);
       return;
     }
 
@@ -355,12 +364,28 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
                     <input
                       type="number"
                       min="0"
+                      max={selectedItem.quantity}
                       step="1"
                       value={caseCount}
-                      onChange={(event) => setCaseCount(event.target.value)}
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        const nextCaseCount = Number(nextValue);
+                        if (!Number.isFinite(nextCaseCount)) {
+                          setCaseCount("");
+                          return;
+                        }
+
+                        if (nextCaseCount > selectedItem.quantity) {
+                          setCaseCount(String(selectedItem.quantity));
+                          return;
+                        }
+
+                        setCaseCount(nextValue);
+                      }}
                       className="w-full rounded-md border border-zinc-300 px-3 py-2"
                     />
                   </label>
+                  <p className="text-xs text-zinc-500">Maximum allowed: {selectedItem.quantity}</p>
                 </div>
               ) : (
                 <div className="space-y-2 text-sm">
