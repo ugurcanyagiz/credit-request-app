@@ -162,10 +162,32 @@ export function buildCreditRequestDraftText({
     uniqueInvoices.join(", ") || "N/A"
   } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
 
-  const rowWidths = [8, 32, 20, 5, 12, 11] as const;
-  const rowAlignments: TableAlignment[] = ["left", "left", "left", "right", "right", "right"];
+  const rowWidths = [15, 15, 15, 35, 15, 25, 30, 15, 10, 15] as const;
+  const rowAlignments: TableAlignment[] = [
+    "left",
+    "left",
+    "left",
+    "left",
+    "left",
+    "left",
+    "left",
+    "left",
+    "right",
+    "right",
+  ];
   const headerRow = toTableRow(
-    ["Item No", "Description", "Reason", "Qty", "Sales Amt", "Price"],
+    [
+      "C.Code",
+      "Invoice",
+      "Item",
+      "Item Description",
+      "Batch",
+      "Lot",
+      "Reason",
+      "Type",
+      "Qty",
+      "Amount",
+    ],
     [...rowWidths],
     rowAlignments,
   );
@@ -177,14 +199,11 @@ export function buildCreditRequestDraftText({
     "",
     "Please review the credit request details below.",
     "",
-    "CUSTOMER INFORMATION",
     `Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
     "",
-    "INVOICE INFORMATION",
     `Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
     `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
-    "SELECTED ITEMS",
     dividerRow,
     headerRow,
     dividerRow,
@@ -192,12 +211,16 @@ export function buildCreditRequestDraftText({
       ? displayRows.map(({ item, description, reason }) =>
           toTableRow(
             [
+              item.customer_code || "-",
+              item.invoice_no || "-",
               item.item_no || "-",
               description,
+              item.sales_batch_number || "-",
+              item.sales_lot_no || "-",
               reason,
+              item.credit_type || "-",
               String(item.quantity ?? 0),
-              money(Number(item.sales_amount ?? 0)),
-              money(Number(item.piece_price ?? 0)),
+              money(Number(item.credit_amount ?? 0)),
             ],
             [...rowWidths],
             rowAlignments,
@@ -208,7 +231,6 @@ export function buildCreditRequestDraftText({
     "",
     ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
       ? [
-          "PHOTO LINKS",
           ...uploadedPhotos
             .filter((photo) => Boolean(photo.publicUrl))
             .flatMap((photo, index) => [
@@ -219,7 +241,6 @@ export function buildCreditRequestDraftText({
           "",
         ]
       : [
-          "PHOTO LINKS",
           "No hosted photo links available.",
           "",
         ]),
@@ -232,24 +253,12 @@ export function buildCreditRequestDraftText({
   };
 }
 
-const MAX_MAILTO_URL_LENGTH = 1800;
-
 export function buildCreditRequestMailtoUrl({ subject, text }: { subject: string; text: string }) {
   const buildUrl = (body: string) =>
     `mailto:${CREDIT_REQUEST_RECIPIENT}?subject=${encodeMailtoValue(subject)}&body=${encodeMailtoValue(body)}`;
-
-  const fullUrl = buildUrl(text);
-  if (fullUrl.length <= MAX_MAILTO_URL_LENGTH) {
-    return { url: fullUrl, isBodyTruncated: false };
-  }
-
-  const truncationNotice = "\n\n[Email body truncated to fit mail client limits. Please review request details in app if needed.]";
-  const allowedBodyLength = Math.max(300, text.length - (fullUrl.length - MAX_MAILTO_URL_LENGTH) - truncationNotice.length);
-  const truncatedText = `${text.slice(0, allowedBodyLength)}${truncationNotice}`;
-
   return {
-    url: buildUrl(truncatedText),
-    isBodyTruncated: true,
+    url: buildUrl(text),
+    isBodyTruncated: false,
   };
 }
 
