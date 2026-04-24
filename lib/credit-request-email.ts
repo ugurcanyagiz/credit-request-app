@@ -68,48 +68,40 @@ function toEmailReasonRowKey(item: CreditRequestCartItem) {
   return `${item.customer_code}::${item.invoice_no}::${item.item_no}`;
 }
 
-function isStandaloneReasonRow(itemDescription: string) {
-  return itemDescription.trim().startsWith("Reason:");
+function compactText(value: string, maxLength: number) {
+  return truncate((value || "-").replace(/\s+/g, " ").trim(), maxLength);
 }
 
-function parseReasonAndDescription(itemDescription: string) {
-  const normalizedDescription = itemDescription.trim();
-
-  if (normalizedDescription.startsWith("Reason:")) {
-    const reason = normalizedDescription.replace(/^Reason:/, "").trim();
-    return { description: "-", reason: reason.length > 0 ? reason : null };
-  }
-
-  const splitOnReason = normalizedDescription.split(/\s*\|\s*Reason:\s*/i);
-  if (splitOnReason.length > 1) {
-    const [descriptionPart, ...reasonParts] = splitOnReason;
-    const reason = reasonParts.join(" | ").trim();
-    return {
-      description: descriptionPart.trim() || "-",
-      reason: reason.length > 0 ? reason : null,
-    };
-  }
-
-  return { description: normalizedDescription || "-", reason: null };
+function compactDetail(label: string, value: string, maxLength: number) {
+  return `${label}: ${compactText(value, maxLength)}`;
 }
 
-function toReasonRowKey(item: CreditRequestCartItem) {
-  return `${item.customer_code}::${item.invoice_no}::${item.item_no}`;
-}
+function formatSelectedItemBlock({
+  item,
+  description,
+  reason,
+}: {
+  item: CreditRequestCartItem;
+  description: string;
+  reason: string;
+}) {
+  const primaryLine = [
+    compactDetail("Item", item.item_no || "-", 20),
+    compactDetail("Customer", item.customer_code || "-", 16),
+    compactDetail("Invoice", item.invoice_no || "-", 16),
+    compactDetail("Qty", String(item.quantity ?? 0), 8),
+    compactDetail("Amount", money(Number(item.credit_amount ?? 0)), 14),
+  ].join("   ");
 
-type TableAlignment = "left" | "right";
+  const secondaryDetails = [
+    `Desc: ${compactText(description, 34)}`,
+    compactDetail("Reason", reason || "-", 30),
+    compactDetail("Batch", item.sales_batch_number || "-", 18),
+    compactDetail("Lot", item.sales_lot_no || "-", 18),
+    compactDetail("Type", item.credit_type || "-", 8),
+  ].join("   ");
 
-function toTableCell(value: string, width: number, alignment: TableAlignment) {
-  const normalizedValue = truncate(value, width).replace(/\s+/g, " ");
-  return alignment === "right"
-    ? normalizedValue.padStart(width, " ")
-    : normalizedValue.padEnd(width, " ");
-}
-
-function toTableRow(columns: string[], widths: number[], alignments: TableAlignment[]) {
-  return columns
-    .map((value, index) => toTableCell(value, widths[index], alignments[index]))
-    .join("  ");
+  return [primaryLine, secondaryDetails];
 }
 
 function encodeMailtoValue(value: string) {
@@ -162,37 +154,7 @@ export function buildCreditRequestDraftText({
     uniqueInvoices.join(", ") || "N/A"
   } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
 
-  const rowWidths = [7, 8, 8, 24, 10, 12, 18, 6, 4, 8] as const;
-  const rowAlignments: TableAlignment[] = [
-    "left",
-    "left",
-    "left",
-    "left",
-    "left",
-    "left",
-    "left",
-    "left",
-    "right",
-    "right",
-  ];
-  const headerRow = toTableRow(
-    [
-      "C.Code",
-      "Invoice",
-      "Item",
-      "Item Description",
-      "Batch",
-      "Lot",
-      "Reason",
-      "Type",
-      "Qty",
-      "Amount",
-    ],
-    [...rowWidths],
-    rowAlignments,
-  );
-  const tableWidth = headerRow.length;
-  const dividerRow = "-".repeat(tableWidth);
+  const dividerRow = "-".repeat(60);
 
   const textLines = [
     "Hello Credit Team,",
@@ -204,39 +166,23 @@ export function buildCreditRequestDraftText({
     `Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
     `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
-    dividerRow,
-    headerRow,
+    "SELECTED ITEMS",
+    "",
     dividerRow,
     ...(displayRows.length > 0
-      ? displayRows.map(({ item, description, reason }) =>
-          toTableRow(
-            [
-              item.customer_code || "-",
-              item.invoice_no || "-",
-              item.item_no || "-",
-              description,
-              item.sales_batch_number || "-",
-              item.sales_lot_no || "-",
-              reason,
-              item.credit_type || "-",
-              String(item.quantity ?? 0),
-              money(Number(item.credit_amount ?? 0)),
-            ],
-            [...rowWidths],
-            rowAlignments,
-          ),
-        )
+      ? displayRows.flatMap(({ item, description, reason }, index) => [
+          ...formatSelectedItemBlock({ item, description, reason }),
+          ...(index < displayRows.length - 1 ? [""] : []),
+        ])
       : ["No selected product rows found."]),
     dividerRow,
     "",
     ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
       ? [
+          "Photo:",
           ...uploadedPhotos
             .filter((photo) => Boolean(photo.publicUrl))
-            .flatMap((photo) => [
-              `Photo: ${photo.publicUrl}`,
-              "",
-            ]),
+            .map((photo) => photo.publicUrl),
           "",
         ]
       : [
