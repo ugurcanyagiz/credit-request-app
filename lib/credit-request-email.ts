@@ -162,7 +162,7 @@ export function buildCreditRequestDraftText({
     uniqueInvoices.join(", ") || "N/A"
   } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
 
-  const rowWidths = [13, 10, 10, 28, 18, 12, 18, 11, 5, 13] as const;
+  const rowWidths = [15, 15, 15, 35, 15, 25, 30, 15, 10, 15] as const;
   const rowAlignments: TableAlignment[] = [
     "left",
     "left",
