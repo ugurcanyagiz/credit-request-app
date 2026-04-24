@@ -78,8 +78,6 @@ export function GlobalCartWidget() {
   const [isSending, setIsSending] = useState(false);
   const [isRemovingAll, setIsRemovingAll] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [sendSuccessMessage, setSendSuccessMessage] = useState<string | null>(null);
-  const [removeAllMessage, setRemoveAllMessage] = useState<string | null>(null);
   const [removeAllError, setRemoveAllError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,6 +120,16 @@ export function GlobalCartWidget() {
           reason: parsed.reason ?? queuedReason,
         };
       });
+  }, [items]);
+
+  const cartItemCount = useMemo(() => {
+    const regularRows = items.filter((item) => !isStandaloneReasonRow(item));
+    const regularKeys = new Set(regularRows.map((item) => toReasonRowKey(item)));
+    const standaloneRowsWithoutRegularPair = items.filter(
+      (item) => isStandaloneReasonRow(item) && !regularKeys.has(toReasonRowKey(item)),
+    );
+
+    return regularRows.length + standaloneRowsWithoutRegularPair.length;
   }, [items]);
 
   const loadCart = useCallback(async () => {
@@ -265,9 +273,7 @@ export function GlobalCartWidget() {
 
     setIsRemovingAll(true);
     setRemoveAllError(null);
-    setRemoveAllMessage(null);
     setSendError(null);
-    setSendSuccessMessage(null);
 
     try {
       const response = await fetch("/api/cart", { method: "DELETE" });
@@ -281,7 +287,6 @@ export function GlobalCartWidget() {
       setItems([]);
       setPictures([]);
       setPhotoError(null);
-      setRemoveAllMessage("Cart cleared. All line items and uploaded photos were removed.");
       await loadCart();
       await loadPhotos();
     } catch {
@@ -307,7 +312,6 @@ export function GlobalCartWidget() {
 
     setIsSending(true);
     setSendError(null);
-    setSendSuccessMessage(null);
 
     try {
       const formData = new FormData();
@@ -331,11 +335,6 @@ export function GlobalCartWidget() {
       }
 
       window.location.assign(payload.mailtoUrl);
-      setSendSuccessMessage(
-        payload.isBodyTruncated
-          ? `Email draft opened to ${payload.recipient}. Some body content was shortened to fit mail app limits.`
-          : `Email draft opened in your default mail app to ${payload.recipient}. Review and send.`,
-      );
     } catch {
       setSendError("Failed to prepare the email draft.");
     } finally {
@@ -392,7 +391,7 @@ export function GlobalCartWidget() {
         }}
         className="fixed right-4 top-4 z-40 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
       >
-        Cart ({items.length})
+        Cart ({cartItemCount})
       </button>
 
       {isOpen ? (
@@ -567,19 +566,9 @@ export function GlobalCartWidget() {
               {sendError ? (
                 <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{sendError}</p>
               ) : null}
-              {sendSuccessMessage ? (
-                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                  {sendSuccessMessage}
-                </p>
-              ) : null}
               {removeAllError ? (
                 <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                   {removeAllError}
-                </p>
-              ) : null}
-              {removeAllMessage ? (
-                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                  {removeAllMessage}
                 </p>
               ) : null}
               <p className="text-xs text-slate-500">
