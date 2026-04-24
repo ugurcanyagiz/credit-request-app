@@ -124,6 +124,16 @@ export function GlobalCartWidget() {
       });
   }, [items]);
 
+  const cartItemCount = useMemo(() => {
+    const regularRows = items.filter((item) => !isStandaloneReasonRow(item));
+    const regularKeys = new Set(regularRows.map((item) => toReasonRowKey(item)));
+    const standaloneRowsWithoutRegularPair = items.filter(
+      (item) => isStandaloneReasonRow(item) && !regularKeys.has(toReasonRowKey(item)),
+    );
+
+    return regularRows.length + standaloneRowsWithoutRegularPair.length;
+  }, [items]);
+
   const loadCart = useCallback(async () => {
     const response = await fetch("/api/cart", { cache: "no-store" });
 
@@ -392,7 +402,7 @@ export function GlobalCartWidget() {
         }}
         className="fixed right-4 top-4 z-40 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
       >
-        Cart ({items.length})
+        Cart ({cartItemCount})
       </button>
 
       {isOpen ? (
