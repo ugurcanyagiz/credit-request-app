@@ -133,6 +133,12 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
       return;
     }
 
+    const requestedQuantity = creditType === "case" ? numericCaseCount : numericRequestedPieces;
+    if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
+      setSubmitError("Please enter a valid requested quantity.");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
     const response = await fetch("/api/cart", {
@@ -145,7 +151,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
         invoice_no: invoiceNo,
         item_no: selectedItem.item_no,
         item_descp: selectedItem.item_descp,
-        quantity: selectedItem.quantity,
+        quantity: requestedQuantity,
         sales_amount: selectedItem.sales_amount,
         sales_batch_number: selectedItem.sales_batch_number,
         sales_lot_no: selectedItem.sales_lot_no,
