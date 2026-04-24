@@ -177,16 +177,16 @@ export function buildCreditRequestDraftText({
   ];
   const headerRow = toTableRow(
     [
-      "Customer Code",
-      "Invoice No",
-      "Item No",
+      "C.Code",
+      "Invoice",
+      "Item",
       "Item Description",
-      "Sales Batch Number",
-      "Sales Lot No",
+      "Batch",
+      "Lot",
       "Reason",
-      "Credit Type",
+      "Type",
       "Qty",
-      "Credit Amount",
+      "Amount",
     ],
     [...rowWidths],
     rowAlignments,
