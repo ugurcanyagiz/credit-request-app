@@ -446,11 +446,11 @@ export function GlobalCartWidget() {
                         <th className="px-3 py-3 text-left font-semibold">Invoice No</th>
                         <th className="px-3 py-3 text-left font-semibold">Item No</th>
                         <th className="px-3 py-3 text-left font-semibold">Item Description</th>
+                        <th className="px-3 py-3 text-left font-semibold">Sales Batch Number</th>
+                        <th className="px-3 py-3 text-left font-semibold">Sales Lot No</th>
                         <th className="px-3 py-3 text-left font-semibold">Reason</th>
-                        <th className="px-3 py-3 text-right font-semibold">Qty</th>
-                        <th className="px-3 py-3 text-right font-semibold">Sales Amount</th>
-                        <th className="px-3 py-3 text-right font-semibold">Piece Price</th>
                         <th className="px-3 py-3 text-center font-semibold">Credit Type</th>
+                        <th className="px-3 py-3 text-right font-semibold">Qty</th>
                         <th className="px-3 py-3 text-right font-semibold">Credit Amount</th>
                         <th className="px-3 py-3 text-center font-semibold">Action</th>
                       </tr>
@@ -462,11 +462,11 @@ export function GlobalCartWidget() {
                           <td className="px-3 py-3">{item.invoice_no}</td>
                           <td className="px-3 py-3">{item.item_no}</td>
                           <td className="px-3 py-3">{item.displayDescription}</td>
+                          <td className="px-3 py-3">{item.sales_batch_number ?? "—"}</td>
+                          <td className="px-3 py-3">{item.sales_lot_no ?? "—"}</td>
                           <td className="px-3 py-3">{item.reason ?? "—"}</td>
-                          <td className="px-3 py-3 text-right">{item.quantity ?? 0}</td>
-                          <td className="px-3 py-3 text-right">{Number(item.sales_amount ?? 0).toFixed(2)}</td>
-                          <td className="px-3 py-3 text-right">{Number(item.piece_price ?? 0).toFixed(2)}</td>
                           <td className="px-3 py-3 text-center">{item.credit_type}</td>
+                          <td className="px-3 py-3 text-right">{item.quantity ?? 0}</td>
                           <td className="px-3 py-3 text-right">{Number(item.credit_amount).toFixed(2)}</td>
                           <td className="px-3 py-3 text-center">
                             <button
