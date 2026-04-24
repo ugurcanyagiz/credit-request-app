@@ -21,6 +21,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
   const [itemNo, setItemNo] = useState("");
   const [description, setDescription] = useState("");
   const [creditType, setCreditType] = useState<CreditType>("case");
+  const [quantity, setQuantity] = useState("");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -134,6 +135,8 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
 
     const parsedAmount = Number(amount);
     const creditAmount = Number.isFinite(parsedAmount) ? parsedAmount : 0;
+    const parsedQuantity = Number(quantity);
+    const noteQuantity = Number.isFinite(parsedQuantity) ? parsedQuantity : 0;
 
     const trimmedDescription = description.trim();
     const itemDescription =
@@ -154,7 +157,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
         invoice_no: invoiceNo.trim() || "NOT_FROM_RECENT_INVOICES",
         item_no: itemNo.trim() || "NOT_FROM_RECENT_INVOICES",
         item_descp: itemDescription,
-        quantity: 0,
+        quantity: noteQuantity,
         sales_amount: 0,
         sales_batch_number: null,
         sales_lot_no: null,
@@ -178,6 +181,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
     setItemNo("");
     setDescription("");
     setCreditType("case");
+    setQuantity("");
     setAmount("");
     setReason("");
     resetLookupState();
@@ -312,6 +316,18 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                   <option value="case">case</option>
                   <option value="piece">piece</option>
                 </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-zinc-700">Quantity</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={quantity}
+                  onChange={(event) => setQuantity(event.target.value)}
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                />
               </label>
 
               <label className="block">
