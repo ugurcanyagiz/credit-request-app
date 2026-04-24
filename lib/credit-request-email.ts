@@ -253,24 +253,12 @@ export function buildCreditRequestDraftText({
   };
 }
 
-const MAX_MAILTO_URL_LENGTH = 1800;
-
 export function buildCreditRequestMailtoUrl({ subject, text }: { subject: string; text: string }) {
   const buildUrl = (body: string) =>
     `mailto:${CREDIT_REQUEST_RECIPIENT}?subject=${encodeMailtoValue(subject)}&body=${encodeMailtoValue(body)}`;
-
-  const fullUrl = buildUrl(text);
-  if (fullUrl.length <= MAX_MAILTO_URL_LENGTH) {
-    return { url: fullUrl, isBodyTruncated: false };
-  }
-
-  const truncationNotice = "\n\n[Email body truncated to fit mail client limits. Please review request details in app if needed.]";
-  const allowedBodyLength = Math.max(300, text.length - (fullUrl.length - MAX_MAILTO_URL_LENGTH) - truncationNotice.length);
-  const truncatedText = `${text.slice(0, allowedBodyLength)}${truncationNotice}`;
-
   return {
-    url: buildUrl(truncatedText),
-    isBodyTruncated: true,
+    url: buildUrl(text),
+    isBodyTruncated: false,
   };
 }
 
