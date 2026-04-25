@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRef, useState, useMemo, type ChangeEvent } from "react";
 
 type InvoiceItem = {
   item_no: string;
@@ -44,7 +44,10 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
   const [otherReason, setOtherReason] = useState("");
   const [isReasonDropdownOpen, setIsReasonDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [pictureError, setPictureError] = useState<string | null>(null);
+  const pictureInputRef = useRef<HTMLInputElement | null>(null);
 
   const numericCaseCount = Number(caseCount);
   const numericPiecesPerCase = Number(piecesPerCase);
@@ -102,6 +105,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
     setOtherReason("");
     setIsReasonDropdownOpen(false);
     setSubmitError(null);
+    setPictureError(null);
   }
 
   function closeModal() {
@@ -199,6 +203,47 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
     setIsSubmitting(false);
     window.dispatchEvent(new Event("cart-updated"));
     setSelectedItem(null);
+  }
+
+  function onPickPicture() {
+    pictureInputRef.current?.click();
+  }
+
+  async function onPictureSelected(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+
+    if (files.length === 0) {
+      return;
+    }
+
+    setIsUploadingPicture(true);
+    setPictureError(null);
+
+    try {
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append("photos", file);
+      });
+
+      const response = await fetch("/api/cart/photos", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+
+      if (!response.ok) {
+        setPictureError(payload?.error ?? "Failed to upload picture.");
+        return;
+      }
+
+      window.dispatchEvent(new Event("cart-photos-updated"));
+    } catch {
+      setPictureError("Failed to upload picture.");
+    } finally {
+      setIsUploadingPicture(false);
+    }
   }
 
 
@@ -430,12 +475,34 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
               </div>
 
               {submitError ? <p className="mt-3 text-sm text-red-600">{submitError}</p> : null}
+              {pictureError ? <p className="mt-3 text-sm text-red-600">{pictureError}</p> : null}
 
-              <div className="mt-4 flex justify-end">
+              <input
+                ref={pictureInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => void onPictureSelected(event)}
+              />
+
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={onPickPicture}
+                  disabled={isUploadingPicture || isSubmitting}
+                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isUploadingPicture ? "Uploading..." : "Add Picture"}
+                </button>
                 <button
                   type="button"
                   onClick={() => void addSelectedItemToCart()}
-                  disabled={autoCreditAmount === null || !Number.isFinite(autoCreditAmount) || isSubmitting}
+                  disabled={
+                    autoCreditAmount === null ||
+                    !Number.isFinite(autoCreditAmount) ||
+                    isSubmitting ||
+                    isUploadingPicture
+                  }
                   className="rounded-md bg-zinc-900 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSubmitting ? "Adding..." : "Add"}
