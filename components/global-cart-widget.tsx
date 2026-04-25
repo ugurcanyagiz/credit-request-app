@@ -351,11 +351,17 @@ export function GlobalCartWidget() {
       void loadCart();
     }
 
+    function handlePhotosUpdated() {
+      void loadPhotos();
+    }
+
     window.addEventListener("cart-updated", handleUpdated);
+    window.addEventListener("cart-photos-updated", handlePhotosUpdated);
 
     return () => {
       window.clearTimeout(timeoutId);
       window.removeEventListener("cart-updated", handleUpdated);
+      window.removeEventListener("cart-photos-updated", handlePhotosUpdated);
     };
   }, [loadCart, loadPhotos]);
 
