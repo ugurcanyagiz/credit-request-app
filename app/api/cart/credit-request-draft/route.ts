@@ -93,6 +93,11 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const cartRowsRaw = formData.get("cartRows");
+  const creditRequestNoRaw = formData.get("creditRequestNo");
+  const creditRequestNo =
+    typeof creditRequestNoRaw === "string" && creditRequestNoRaw.trim().length > 0
+      ? creditRequestNoRaw.trim()
+      : null;
 
   if (typeof cartRowsRaw !== "string") {
     return Response.json({ error: "Missing cart rows payload" }, { status: 400 });
@@ -116,6 +121,22 @@ export async function POST(request: Request) {
 
   try {
     const cartRows = cartRowsCandidate as CreditRequestCartItem[];
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: creditRequestNo, error: creditRequestNoError } = await supabaseAdmin.rpc(
+      "get_next_credit_request_no",
+    );
+
+    if (creditRequestNoError) {
+      console.error("Failed to generate credit request number", creditRequestNoError);
+      return Response.json({ error: "Unable to generate Credit Request number. Please try again." }, { status: 500 });
+    }
+
+    const normalizedCreditRequestNo = extractCreditRequestNo(creditRequestNo);
+    if (!normalizedCreditRequestNo) {
+      console.error("Invalid credit request number RPC result", creditRequestNo);
+      return Response.json({ error: "Unable to generate Credit Request number. Please try again." }, { status: 500 });
+    }
+
     const draftId = await ensureCartDraftId({ userId, salesperson: session.user.salespersonName });
     const persistedPhotos = await listDraftPhotos(draftId);
     const customerName = await loadCustomerNameForDraft({
