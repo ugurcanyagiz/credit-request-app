@@ -106,9 +106,6 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
           placeholder="Minimum 2 characters"
           className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
         />
-        <p className="text-xs text-zinc-500">
-          Enter an item number or description to find the invoice and open Product Detail & Credit Request directly.
-        </p>
       </div>
 
       {searchError ? <p className="text-sm text-red-600">{searchError}</p> : null}
@@ -122,17 +119,17 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
           {!isSearching && searchResults.length > 0 ? (
             <ul className="space-y-2">
               {searchResults.map((item, index) => (
-                <li key={`${item.invoice_no}-${item.item_no}-${index}`} className="rounded-md border border-zinc-200 p-3 text-sm">
-                  <p className="text-zinc-600">Invoice No: {item.invoice_no}</p>
-                  <p className="mb-2 text-zinc-600">Invoice Date: {item.invoice_date}</p>
+                <li key={`${item.invoice_no}-${item.item_no}-${index}`} className="rounded-md border border-zinc-200 text-sm">
                   <button
                     type="button"
                     onClick={() => setSelectedResult(item)}
-                    className="font-medium text-blue-700 underline-offset-2 hover:underline"
+                    className="block w-full px-3 py-3 text-left transition-colors hover:bg-zinc-50"
                   >
-                    {item.item_no}
+                    <p className="text-zinc-600">Invoice No: {item.invoice_no}</p>
+                    <p className="mb-2 text-zinc-600">Invoice Date: {item.invoice_date}</p>
+                    <p className="font-medium text-blue-700">{item.item_no}</p>
+                    <p className="text-zinc-700">{item.item_descp}</p>
                   </button>
-                  <p className="text-zinc-700">{item.item_descp}</p>
                 </li>
               ))}
             </ul>
