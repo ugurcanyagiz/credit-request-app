@@ -20,6 +20,31 @@ type CustomerNameRow = {
   customer_name: string | null;
 };
 
+function extractCreditRequestNo(value: unknown) {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (Array.isArray(value) && value.length > 0) {
+    const [first] = value;
+    if (typeof first === "string") {
+      return first.trim();
+    }
+
+    if (first && typeof first === "object" && "get_next_credit_request_no" in first) {
+      const raw = (first as { get_next_credit_request_no?: unknown }).get_next_credit_request_no;
+      return typeof raw === "string" ? raw.trim() : "";
+    }
+  }
+
+  if (value && typeof value === "object" && "get_next_credit_request_no" in value) {
+    const raw = (value as { get_next_credit_request_no?: unknown }).get_next_credit_request_no;
+    return typeof raw === "string" ? raw.trim() : "";
+  }
+
+  return "";
+}
+
 async function loadCustomerNameForDraft({
   salesperson,
   customerCode,
@@ -124,7 +149,9 @@ export async function POST(request: Request) {
       return Response.json({ error: "Unable to generate Credit Request number. Please try again." }, { status: 500 });
     }
 
-    if (typeof creditRequestNo !== "string" || creditRequestNo.trim().length === 0) {
+    const normalizedCreditRequestNo = extractCreditRequestNo(creditRequestNo);
+    if (!normalizedCreditRequestNo) {
+      console.error("Invalid credit request number RPC result", creditRequestNo);
       return Response.json({ error: "Unable to generate Credit Request number. Please try again." }, { status: 500 });
     }
 
@@ -146,7 +173,7 @@ export async function POST(request: Request) {
       uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
       customerName,
     });
-    const subject = `${creditRequestNo.trim()} - ${draft.subject}`;
+    const subject = `${normalizedCreditRequestNo} - ${draft.subject}`;
     const mailtoDraft = buildCreditRequestMailtoUrl({
       subject,
       text: draft.text,
