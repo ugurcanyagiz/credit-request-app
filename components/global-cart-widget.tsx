@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Image from "next/image";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import type { CreditRequestCartItem } from "@/lib/credit-request-email";
 
@@ -81,24 +80,6 @@ export function GlobalCartWidget() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [removeAllError, setRemoveAllError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabaseClientRef = useRef<SupabaseClient | null>(null);
-
-  function getSupabaseClient() {
-    if (supabaseClientRef.current) {
-      return supabaseClientRef.current;
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey =
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Missing Supabase public environment variables.");
-    }
-
-    supabaseClientRef.current = createClient(supabaseUrl, supabaseAnonKey);
-    return supabaseClientRef.current;
-  }
 
   const cartRows = useMemo(() => {
     const isManualNote = (item: CartItem) => isStandaloneReasonRow(item);
@@ -341,31 +322,17 @@ export function GlobalCartWidget() {
     setSendError(null);
 
     try {
-      let creditRequestNo: string | null = null;
-
-      try {
-        const supabase = getSupabaseClient();
-        const { data, error } = await supabase.rpc("get_next_credit_request_no");
-
-        if (error) {
-          setSendError("Unable to generate Credit Request number. Please try again.");
-          return;
-        }
-
-        if (typeof data !== "string" || data.trim().length === 0) {
-          setSendError("Unable to generate Credit Request number. Please try again.");
-          return;
-        }
-
-        creditRequestNo = data.trim();
-      } catch {
-        setSendError("Unable to generate Credit Request number. Please try again.");
-        return;
-      }
+      const now = new Date();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const yy = String(now.getFullYear()).slice(-2);
+      const todayMMDDYY = `${mm}${dd}${yy}`;
+      const customerCode = cartRows[0]?.customer_code?.trim() || "UNKNOWN";
+      const subject = `Credit Request - ${customerCode}-${todayMMDDYY}`;
 
       const formData = new FormData();
       formData.set("cartRows", JSON.stringify(cartRows));
-      formData.set("creditRequestNo", creditRequestNo);
+      formData.set("subject", subject);
 
       const response = await fetch("/api/cart/credit-request-draft", {
         method: "POST",

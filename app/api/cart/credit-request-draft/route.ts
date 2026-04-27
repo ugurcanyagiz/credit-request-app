@@ -20,31 +20,6 @@ type CustomerNameRow = {
   customer_name: string | null;
 };
 
-function extractCreditRequestNo(value: unknown) {
-  if (typeof value === "string") {
-    return value.trim();
-  }
-
-  if (Array.isArray(value) && value.length > 0) {
-    const [first] = value;
-    if (typeof first === "string") {
-      return first.trim();
-    }
-
-    if (first && typeof first === "object" && "get_next_credit_request_no" in first) {
-      const raw = (first as { get_next_credit_request_no?: unknown }).get_next_credit_request_no;
-      return typeof raw === "string" ? raw.trim() : "";
-    }
-  }
-
-  if (value && typeof value === "object" && "get_next_credit_request_no" in value) {
-    const raw = (value as { get_next_credit_request_no?: unknown }).get_next_credit_request_no;
-    return typeof raw === "string" ? raw.trim() : "";
-  }
-
-  return "";
-}
-
 async function loadCustomerNameForDraft({
   salesperson,
   customerCode,
@@ -111,11 +86,8 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const cartRowsRaw = formData.get("cartRows");
-  const creditRequestNoRaw = formData.get("creditRequestNo");
-  const creditRequestNo =
-    typeof creditRequestNoRaw === "string" && creditRequestNoRaw.trim().length > 0
-      ? creditRequestNoRaw.trim()
-      : null;
+  const subjectRaw = formData.get("subject");
+  const subject = typeof subjectRaw === "string" && subjectRaw.trim().length > 0 ? subjectRaw.trim() : null;
 
   if (typeof cartRowsRaw !== "string") {
     return Response.json({ error: "Missing cart rows payload" }, { status: 400 });
@@ -133,28 +105,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "No cart rows provided" }, { status: 400 });
   }
 
+  if (!subject) {
+    return Response.json({ error: "Missing email subject" }, { status: 400 });
+  }
+
   if (!cartRowsCandidate.every((item) => isValidCartItem(item))) {
     return Response.json({ error: "Invalid cart row fields" }, { status: 400 });
   }
 
   try {
     const cartRows = cartRowsCandidate as CreditRequestCartItem[];
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data: creditRequestNo, error: creditRequestNoError } = await supabaseAdmin.rpc(
-      "get_next_credit_request_no",
-    );
-
-    if (creditRequestNoError) {
-      console.error("Failed to generate credit request number", creditRequestNoError);
-      return Response.json({ error: "Unable to generate Credit Request number. Please try again." }, { status: 500 });
-    }
-
-    const normalizedCreditRequestNo = extractCreditRequestNo(creditRequestNo);
-    if (!normalizedCreditRequestNo) {
-      console.error("Invalid credit request number RPC result", creditRequestNo);
-      return Response.json({ error: "Unable to generate Credit Request number. Please try again." }, { status: 500 });
-    }
-
     const draftId = await ensureCartDraftId({ userId, salesperson: session.user.salespersonName });
     const persistedPhotos = await listDraftPhotos(draftId);
     const customerName = await loadCustomerNameForDraft({
@@ -173,7 +133,6 @@ export async function POST(request: Request) {
       uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
       customerName,
     });
-    const subject = `${normalizedCreditRequestNo} - ${draft.subject}`;
     const mailtoDraft = buildCreditRequestMailtoUrl({
       subject,
       text: draft.text,
