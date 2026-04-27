@@ -109,6 +109,20 @@ export async function POST(request: Request) {
 
   try {
     const cartRows = cartRowsCandidate as CreditRequestCartItem[];
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: creditRequestNo, error: creditRequestNoError } = await supabaseAdmin.rpc(
+      "get_next_credit_request_no",
+    );
+
+    if (creditRequestNoError) {
+      console.error("Failed to generate credit request number", creditRequestNoError);
+      return Response.json({ error: "Unable to generate Credit Request number. Please try again." }, { status: 500 });
+    }
+
+    if (typeof creditRequestNo !== "string" || creditRequestNo.trim().length === 0) {
+      return Response.json({ error: "Unable to generate Credit Request number. Please try again." }, { status: 500 });
+    }
+
     const draftId = await ensureCartDraftId({ userId, salesperson: session.user.salespersonName });
     const persistedPhotos = await listDraftPhotos(draftId);
     const customerName = await loadCustomerNameForDraft({
@@ -127,8 +141,9 @@ export async function POST(request: Request) {
       uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
       customerName,
     });
+    const subject = `${creditRequestNo.trim()} - ${draft.subject}`;
     const mailtoDraft = buildCreditRequestMailtoUrl({
-      subject: draft.subject,
+      subject,
       text: draft.text,
     });
 
@@ -136,7 +151,10 @@ export async function POST(request: Request) {
       ok: true,
       recipient: CREDIT_REQUEST_RECIPIENT,
       photos: uploadedPhotos,
-      draft,
+      draft: {
+        ...draft,
+        subject,
+      },
       mailtoUrl: mailtoDraft.url,
       isBodyTruncated: mailtoDraft.isBodyTruncated,
     });
