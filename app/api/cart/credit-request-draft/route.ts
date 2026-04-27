@@ -20,29 +20,11 @@ type CustomerNameRow = {
   customer_name: string | null;
 };
 
-function extractCreditRequestNo(value: unknown) {
-  if (typeof value === "string") {
-    return value.trim();
-  }
-
-  if (Array.isArray(value) && value.length > 0) {
-    const [first] = value;
-    if (typeof first === "string") {
-      return first.trim();
-    }
-
-    if (first && typeof first === "object" && "get_next_credit_request_no" in first) {
-      const raw = (first as { get_next_credit_request_no?: unknown }).get_next_credit_request_no;
-      return typeof raw === "string" ? raw.trim() : "";
-    }
-  }
-
-  if (value && typeof value === "object" && "get_next_credit_request_no" in value) {
-    const raw = (value as { get_next_credit_request_no?: unknown }).get_next_credit_request_no;
-    return typeof raw === "string" ? raw.trim() : "";
-  }
-
-  return "";
+function formatTodayAsMMDDYY(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+  return `${month}${day}${year}`;
 }
 
 async function loadCustomerNameForDraft({
@@ -173,7 +155,9 @@ export async function POST(request: Request) {
       uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
       customerName,
     });
-    const subject = `${normalizedCreditRequestNo} - ${draft.subject}`;
+    const customerCodeForSuffix = cartRows[0]?.customer_code?.trim() || "N/A";
+    const subjectSuffix = `${customerCodeForSuffix}-${formatTodayAsMMDDYY(new Date())}`;
+    const subject = `${draft.subject} - ${subjectSuffix}`;
     const mailtoDraft = buildCreditRequestMailtoUrl({
       subject,
       text: draft.text,
