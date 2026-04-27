@@ -72,6 +72,23 @@ function compactText(value: string, maxLength: number) {
   return truncate((value || "-").replace(/\s+/g, " ").trim(), maxLength);
 }
 
+function formatSelectedItemBlock({
+  item,
+  description,
+  reason,
+}: {
+  item: CreditRequestCartItem;
+  description: string;
+  reason: string;
+}) {
+  return [
+    `Item: ${compactText(item.item_no || "-", 24)}`,
+    `Desc: ${compactText(description, 52)}`,
+    `Qty: ${String(item.quantity ?? 0)} Amount: ${money(Number(item.credit_amount ?? 0))}`,
+    `Reason: ${compactText(reason || "-", 32)} Batch: ${compactText(item.sales_batch_number || "-", 20)} Lot: ${compactText(item.sales_lot_no || "-", 20)} Type: ${compactText(item.credit_type || "-", 8)}`,
+  ];
+}
+
 function encodeMailtoValue(value: string) {
   return encodeURIComponent(value);
 }
@@ -122,22 +139,12 @@ export function buildCreditRequestDraftText({
     uniqueInvoices.join(", ") || "N/A"
   } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
 
-  const tabDelimitedHeader = ["Customer Code", "Invoice No", "Item No", "Description", "Reason", "Qty", "Amount"].join(
-    "\t",
-  );
-  const tabDelimitedRows =
+  const selectedItemLines =
     displayRows.length > 0
-      ? displayRows.map(({ item, description, reason }) =>
-          [
-            compactText(item.customer_code || "-", 32),
-            compactText(item.invoice_no || "-", 32),
-            compactText(item.item_no || "-", 32),
-            compactText(description, 72),
-            compactText(reason || "-", 48),
-            String(item.quantity ?? 0),
-            money(Number(item.credit_amount ?? 0)),
-          ].join("\t"),
-        )
+      ? displayRows.flatMap(({ item, description, reason }, index) => [
+          ...formatSelectedItemBlock({ item, description, reason }),
+          ...(index < displayRows.length - 1 ? [""] : []),
+        ])
       : ["No selected product rows found."];
 
   const textLines = [
@@ -145,21 +152,17 @@ export function buildCreditRequestDraftText({
     "",
     "Please review the credit request details below.",
     "",
-    tabDelimitedHeader,
-    ...tabDelimitedRows,
+    `Customer Code: ${uniqueCustomers.join(", ") || "-"}`,
+    `Invoice No: ${uniqueInvoices.join(", ") || "-"}`,
+    `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
+    ...selectedItemLines,
+    "",
+    "Photo:",
     ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
-      ? [
-          "Photo:",
-          ...uploadedPhotos
-            .filter((photo) => Boolean(photo.publicUrl))
-            .map((photo) => photo.publicUrl),
-          "",
-        ]
-      : [
-          "No hosted photo links available.",
-          "",
-        ]),
+      ? uploadedPhotos.filter((photo) => Boolean(photo.publicUrl)).map((photo) => photo.publicUrl)
+      : ["No hosted photo links available."]),
+    "",
     "Thank you.",
   ];
 
