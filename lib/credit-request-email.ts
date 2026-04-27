@@ -96,9 +96,11 @@ function encodeMailtoValue(value: string) {
 export function buildCreditRequestDraftText({
   cartRows,
   uploadedPhotos,
+  customerName,
 }: {
   cartRows: CreditRequestCartItem[];
   uploadedPhotos: UploadedPhotoReference[];
+  customerName?: string | null;
 }) {
   const nonNoteItems = cartRows.filter((item) => !isEmailStandaloneReasonRow(item.item_descp));
   const reasonRowsByKey = new Map<string, string[]>();
@@ -153,6 +155,7 @@ export function buildCreditRequestDraftText({
     "Please review the credit request details below.",
     "",
     `Customer Code: ${uniqueCustomers.join(", ") || "-"}`,
+    `Customer Name: ${compactText(customerName || "-", 64)}`,
     `Invoice No: ${uniqueInvoices.join(", ") || "-"}`,
     `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
