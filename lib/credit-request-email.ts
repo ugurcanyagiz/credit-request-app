@@ -72,38 +72,6 @@ function compactText(value: string, maxLength: number) {
   return truncate((value || "-").replace(/\s+/g, " ").trim(), maxLength);
 }
 
-function compactDetail(label: string, value: string, maxLength: number) {
-  return `${label}: ${compactText(value, maxLength)}`;
-}
-
-function formatSelectedItemBlock({
-  item,
-  description,
-  reason,
-}: {
-  item: CreditRequestCartItem;
-  description: string;
-  reason: string;
-}) {
-  const primaryLine = [
-    compactDetail("Item", item.item_no || "-", 20),
-    compactDetail("Customer", item.customer_code || "-", 16),
-    compactDetail("Invoice", item.invoice_no || "-", 16),
-    compactDetail("Qty", String(item.quantity ?? 0), 8),
-    compactDetail("Amount", money(Number(item.credit_amount ?? 0)), 14),
-  ].join("   ");
-
-  const secondaryDetails = [
-    `Desc: ${compactText(description, 34)}`,
-    compactDetail("Reason", reason || "-", 30),
-    compactDetail("Batch", item.sales_batch_number || "-", 18),
-    compactDetail("Lot", item.sales_lot_no || "-", 18),
-    compactDetail("Type", item.credit_type || "-", 8),
-  ].join("   ");
-
-  return [primaryLine, secondaryDetails];
-}
-
 function encodeMailtoValue(value: string) {
   return encodeURIComponent(value);
 }
@@ -154,28 +122,31 @@ export function buildCreditRequestDraftText({
     uniqueInvoices.join(", ") || "N/A"
   } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
 
-  const dividerRow = "-".repeat(60);
+  const tabDelimitedHeader = ["Customer Code", "Invoice No", "Item No", "Description", "Reason", "Qty", "Amount"].join(
+    "\t",
+  );
+  const tabDelimitedRows =
+    displayRows.length > 0
+      ? displayRows.map(({ item, description, reason }) =>
+          [
+            compactText(item.customer_code || "-", 32),
+            compactText(item.invoice_no || "-", 32),
+            compactText(item.item_no || "-", 32),
+            compactText(description, 72),
+            compactText(reason || "-", 48),
+            String(item.quantity ?? 0),
+            money(Number(item.credit_amount ?? 0)),
+          ].join("\t"),
+        )
+      : ["No selected product rows found."];
 
   const textLines = [
     "Hello Credit Team,",
     "",
     "Please review the credit request details below.",
     "",
-    `Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
-    "",
-    `Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
-    `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
-    "",
-    "SELECTED ITEMS",
-    "",
-    dividerRow,
-    ...(displayRows.length > 0
-      ? displayRows.flatMap(({ item, description, reason }, index) => [
-          ...formatSelectedItemBlock({ item, description, reason }),
-          ...(index < displayRows.length - 1 ? [""] : []),
-        ])
-      : ["No selected product rows found."]),
-    dividerRow,
+    tabDelimitedHeader,
+    ...tabDelimitedRows,
     "",
     ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
       ? [
