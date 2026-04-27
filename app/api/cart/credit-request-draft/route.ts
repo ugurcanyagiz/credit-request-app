@@ -20,6 +20,13 @@ type CustomerNameRow = {
   customer_name: string | null;
 };
 
+function formatTodayAsMMDDYY(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+  return `${month}${day}${year}`;
+}
+
 async function loadCustomerNameForDraft({
   salesperson,
   customerCode,
@@ -127,8 +134,11 @@ export async function POST(request: Request) {
       uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
       customerName,
     });
+    const customerCodeForSuffix = cartRows[0]?.customer_code?.trim() || "N/A";
+    const subjectSuffix = `${customerCodeForSuffix}-${formatTodayAsMMDDYY(new Date())}`;
+    const subject = `${draft.subject} - ${subjectSuffix}`;
     const mailtoDraft = buildCreditRequestMailtoUrl({
-      subject: draft.subject,
+      subject,
       text: draft.text,
     });
 
@@ -136,7 +146,10 @@ export async function POST(request: Request) {
       ok: true,
       recipient: CREDIT_REQUEST_RECIPIENT,
       photos: uploadedPhotos,
-      draft,
+      draft: {
+        ...draft,
+        subject,
+      },
       mailtoUrl: mailtoDraft.url,
       isBodyTruncated: mailtoDraft.isBodyTruncated,
     });
