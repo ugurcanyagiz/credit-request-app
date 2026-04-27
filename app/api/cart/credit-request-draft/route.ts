@@ -86,6 +86,11 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const cartRowsRaw = formData.get("cartRows");
+  const creditRequestNoRaw = formData.get("creditRequestNo");
+  const creditRequestNo =
+    typeof creditRequestNoRaw === "string" && creditRequestNoRaw.trim().length > 0
+      ? creditRequestNoRaw.trim()
+      : null;
 
   if (typeof cartRowsRaw !== "string") {
     return Response.json({ error: "Missing cart rows payload" }, { status: 400 });
