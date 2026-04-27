@@ -8,12 +8,46 @@ import {
 } from "@/lib/credit-request-email";
 import { authOptions } from "@/lib/auth";
 import { ensureCartDraftId, listDraftPhotos, resolveUserId } from "@/lib/cart-draft";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type PersistedPhotoRef = {
   fileName: string;
   publicUrl: string;
   storagePath: string;
 };
+
+type CustomerNameRow = {
+  customer_name: string | null;
+};
+
+async function loadCustomerNameForDraft({
+  salesperson,
+  customerCode,
+}: {
+  salesperson: string;
+  customerCode: string | null;
+}) {
+  if (!customerCode) {
+    return null;
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
+    .from("credit_rows")
+    .select("customer_name")
+    .eq("salesperson", salesperson)
+    .eq("customer_code", customerCode)
+    .not("customer_name", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to load customer name for draft", error);
+    return null;
+  }
+
+  return (data as CustomerNameRow | null)?.customer_name ?? null;
+}
 
 function isValidCartItem(value: unknown): value is CreditRequestCartItem {
   if (!value || typeof value !== "object") {
@@ -74,8 +108,13 @@ export async function POST(request: Request) {
   }
 
   try {
+    const cartRows = cartRowsCandidate as CreditRequestCartItem[];
     const draftId = await ensureCartDraftId({ userId, salesperson: session.user.salespersonName });
     const persistedPhotos = await listDraftPhotos(draftId);
+    const customerName = await loadCustomerNameForDraft({
+      salesperson: session.user.salespersonName,
+      customerCode: cartRows[0]?.customer_code ?? null,
+    });
 
     const uploadedPhotos: PersistedPhotoRef[] = persistedPhotos.map((photo) => ({
       fileName: photo.file_name,
@@ -84,8 +123,9 @@ export async function POST(request: Request) {
     }));
 
     const draft = buildCreditRequestDraftText({
-      cartRows: cartRowsCandidate as CreditRequestCartItem[],
+      cartRows,
       uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
+      customerName,
     });
     const mailtoDraft = buildCreditRequestMailtoUrl({
       subject: draft.subject,

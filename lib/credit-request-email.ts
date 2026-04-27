@@ -72,10 +72,6 @@ function compactText(value: string, maxLength: number) {
   return truncate((value || "-").replace(/\s+/g, " ").trim(), maxLength);
 }
 
-function compactDetail(label: string, value: string, maxLength: number) {
-  return `${label}: ${compactText(value, maxLength)}`;
-}
-
 function formatSelectedItemBlock({
   item,
   description,
@@ -85,23 +81,12 @@ function formatSelectedItemBlock({
   description: string;
   reason: string;
 }) {
-  const primaryLine = [
-    compactDetail("Item", item.item_no || "-", 20),
-    compactDetail("Customer", item.customer_code || "-", 16),
-    compactDetail("Invoice", item.invoice_no || "-", 16),
-    compactDetail("Qty", String(item.quantity ?? 0), 8),
-    compactDetail("Amount", money(Number(item.credit_amount ?? 0)), 14),
-  ].join("   ");
-
-  const secondaryDetails = [
-    `Desc: ${compactText(description, 34)}`,
-    compactDetail("Reason", reason || "-", 30),
-    compactDetail("Batch", item.sales_batch_number || "-", 18),
-    compactDetail("Lot", item.sales_lot_no || "-", 18),
-    compactDetail("Type", item.credit_type || "-", 8),
-  ].join("   ");
-
-  return [primaryLine, secondaryDetails];
+  return [
+    `Item: ${compactText(item.item_no || "-", 24)}`,
+    `Desc: ${compactText(description, 52)}`,
+    `Qty: ${String(item.quantity ?? 0)} Amount: ${money(Number(item.credit_amount ?? 0))}`,
+    `Reason: ${compactText(reason || "-", 32)} Batch: ${compactText(item.sales_batch_number || "-", 20)} Lot: ${compactText(item.sales_lot_no || "-", 20)} Type: ${compactText(item.credit_type || "-", 8)}`,
+  ];
 }
 
 function encodeMailtoValue(value: string) {
@@ -111,9 +96,11 @@ function encodeMailtoValue(value: string) {
 export function buildCreditRequestDraftText({
   cartRows,
   uploadedPhotos,
+  customerName,
 }: {
   cartRows: CreditRequestCartItem[];
   uploadedPhotos: UploadedPhotoReference[];
+  customerName?: string | null;
 }) {
   const nonNoteItems = cartRows.filter((item) => !isEmailStandaloneReasonRow(item.item_descp));
   const reasonRowsByKey = new Map<string, string[]>();
@@ -154,41 +141,31 @@ export function buildCreditRequestDraftText({
     uniqueInvoices.join(", ") || "N/A"
   } - ${nonNoteItems.length} Item(s) - Total ${money(totalCreditAmount)}`;
 
-  const dividerRow = "-".repeat(60);
+  const selectedItemLines =
+    displayRows.length > 0
+      ? displayRows.flatMap(({ item, description, reason }, index) => [
+          ...formatSelectedItemBlock({ item, description, reason }),
+          ...(index < displayRows.length - 1 ? [""] : []),
+        ])
+      : ["No selected product rows found."];
 
   const textLines = [
     "Hello Credit Team,",
     "",
     "Please review the credit request details below.",
     "",
-    `Customer Code(s): ${uniqueCustomers.join(", ") || "-"}`,
-    "",
-    `Invoice No(s): ${uniqueInvoices.join(", ") || "-"}`,
+    `Customer Code: ${uniqueCustomers.join(", ") || "-"}`,
+    `Customer Name: ${compactText(customerName || "-", 64)}`,
+    `Invoice No: ${uniqueInvoices.join(", ") || "-"}`,
     `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
-    "SELECTED ITEMS",
+    ...selectedItemLines,
     "",
-    dividerRow,
-    ...(displayRows.length > 0
-      ? displayRows.flatMap(({ item, description, reason }, index) => [
-          ...formatSelectedItemBlock({ item, description, reason }),
-          ...(index < displayRows.length - 1 ? [""] : []),
-        ])
-      : ["No selected product rows found."]),
-    dividerRow,
-    "",
+    "Photo:",
     ...(uploadedPhotos.some((photo) => Boolean(photo.publicUrl))
-      ? [
-          "Photo:",
-          ...uploadedPhotos
-            .filter((photo) => Boolean(photo.publicUrl))
-            .map((photo) => photo.publicUrl),
-          "",
-        ]
-      : [
-          "No hosted photo links available.",
-          "",
-        ]),
+      ? uploadedPhotos.filter((photo) => Boolean(photo.publicUrl)).map((photo) => photo.publicUrl)
+      : ["No hosted photo links available."]),
+    "",
     "Thank you.",
   ];
 
