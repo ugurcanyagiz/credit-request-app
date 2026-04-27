@@ -270,6 +270,13 @@ export function GlobalCartWidget() {
       return;
     }
 
+    const wasRemoved = await clearCartData();
+    if (!wasRemoved) {
+      setRemoveAllError("Failed to remove all cart data.");
+    }
+  }
+
+  async function clearCartData() {
     setIsRemovingAll(true);
     setRemoveAllError(null);
     setSendError(null);
@@ -279,7 +286,7 @@ export function GlobalCartWidget() {
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) {
         setRemoveAllError(payload?.error ?? "Failed to remove all cart data.");
-        return;
+        return false;
       }
 
       setSelectedPicture(null);
@@ -288,8 +295,10 @@ export function GlobalCartWidget() {
       setPhotoError(null);
       await loadCart();
       await loadPhotos();
+      return true;
     } catch {
       setRemoveAllError("Failed to remove all cart data.");
+      return false;
     } finally {
       setIsRemovingAll(false);
     }
@@ -330,6 +339,12 @@ export function GlobalCartWidget() {
 
       if (!payload.mailtoUrl) {
         setSendError("Unable to prepare email draft link.");
+        return;
+      }
+
+      const wasCartCleared = await clearCartData();
+      if (!wasCartCleared) {
+        setSendError("Email draft was prepared, but cart could not be cleared. Please use Remove All.");
         return;
       }
 
