@@ -87,6 +87,29 @@ export async function POST(request: Request) {
 
   const supabaseAdmin = getSupabaseAdmin();
 
+  const { data: conflictingCustomerRows, error: conflictingCustomerError } = await supabaseAdmin
+    .from("credit_request_cart_items")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("salesperson", session.user.salespersonName)
+    .neq("customer_code", payload.customer_code)
+    .limit(1);
+
+  if (conflictingCustomerError) {
+    console.error("Failed to validate cart customer", conflictingCustomerError);
+    return Response.json({ error: "Failed to validate cart customer" }, { status: 500 });
+  }
+
+  if ((conflictingCustomerRows ?? []).length > 0) {
+    return Response.json(
+      {
+        error:
+          "A credit request for another customer already exists in your cart. Please complete that request before adding items for a different customer.",
+      },
+      { status: 409 },
+    );
+  }
+
   const { error } = await supabaseAdmin.from("credit_request_cart_items").insert({
     user_id: userId,
     salesperson: session.user.salespersonName,
