@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NotFromRecentInvoicesNote } from "@/components/not-from-recent-invoices-note";
+import { CustomerInvoicesView } from "@/components/customer-invoices-view";
 
 type CreditRowInvoice = {
   customer_name: string | null;
@@ -89,28 +90,9 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
         </Link>
       </div>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Invoices</h2>
+      <CustomerInvoicesView customerCode={customerCode} invoices={invoices} />
 
-        <ul className="space-y-2">
-          {invoices.map((invoice) => (
-            <li
-              key={invoice.invoice_no}
-              className="rounded-md border border-zinc-200 text-sm"
-            >
-              <Link
-                href={`/dashboard/customers/${encodeURIComponent(customerCode)}/invoices/${encodeURIComponent(invoice.invoice_no)}`}
-                className="block px-3 py-2 transition-colors hover:bg-zinc-50"
-              >
-                <p className="font-medium">Invoice No: {invoice.invoice_no}</p>
-                <p className="text-zinc-600">Invoice Date: {invoice.invoice_date}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-
-        <NotFromRecentInvoicesNote customerCode={customerCode} />
-      </section>
+      <NotFromRecentInvoicesNote customerCode={customerCode} />
     </main>
   );
 }
