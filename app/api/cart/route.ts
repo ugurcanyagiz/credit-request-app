@@ -1,10 +1,9 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { isMissingRemovedFromCartColumnError } from "@/lib/cart-draft";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import type { Session } from "next-auth";
-
-const PHOTO_BUCKET = process.env.SUPABASE_CART_PHOTOS_BUCKET || "credit-request-cart-photos";
 
 type CartInsertPayload = {
   customer_code?: string;
@@ -20,6 +19,9 @@ type CartInsertPayload = {
   credit_type?: "case" | "piece";
   credit_amount?: number;
 };
+
+const SOFT_DELETE_MIGRATION_HINT =
+  "Database migration required: add removed_from_cart_at column to public.credit_request_photos.";
 
 async function resolveUserId(session: Session): Promise<string | null> {
   const userId = session.user?.id;
@@ -194,47 +196,16 @@ export async function DELETE(request: Request) {
   }
 
   if (draft?.id) {
-    const { data: photos, error: listPhotosError } = await supabaseAdmin
-      .from("credit_request_photos")
-      .select("id,storage_path")
-      .eq("draft_id", draft.id);
-
-    if (listPhotosError) {
-      console.error("Failed to load cart photos during clear-all", listPhotosError);
-      return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
-    }
-
-    const storagePaths = (photos ?? [])
-      .map((photo) => photo.storage_path)
-      .filter((storagePath): storagePath is string => Boolean(storagePath));
-
-    if (storagePaths.length > 0) {
-      const { error: storageDeleteError } = await supabaseAdmin.storage.from(PHOTO_BUCKET).remove(storagePaths);
-      if (storageDeleteError) {
-        console.error("Failed to remove cart photos from storage during clear-all", storageDeleteError);
-        return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
-      }
-    }
-
     const { error: photoRowsDeleteError } = await supabaseAdmin
       .from("credit_request_photos")
-      .delete()
+      .update({ removed_from_cart_at: new Date().toISOString() })
       .eq("draft_id", draft.id);
 
     if (photoRowsDeleteError) {
+      if (isMissingRemovedFromCartColumnError(photoRowsDeleteError)) {
+        return Response.json({ error: SOFT_DELETE_MIGRATION_HINT }, { status: 500 });
+      }
       console.error("Failed to delete cart photo mappings during clear-all", photoRowsDeleteError);
-      return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
-    }
-
-    const { error: draftDeleteError } = await supabaseAdmin
-      .from("credit_request_cart_drafts")
-      .delete()
-      .eq("id", draft.id)
-      .eq("user_id", userId)
-      .eq("salesperson", session.user.salespersonName);
-
-    if (draftDeleteError) {
-      console.error("Failed to delete cart draft during clear-all", draftDeleteError);
       return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
     }
   }
