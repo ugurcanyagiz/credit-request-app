@@ -10,6 +10,7 @@ export type PersistedCartPhoto = {
   public_url: string;
   storage_path: string;
   created_at: string;
+  removed_from_cart_at: string | null;
 };
 
 type CartDraftRow = {
@@ -58,8 +59,9 @@ export async function listDraftPhotos(draftId: string): Promise<PersistedCartPho
 
   const { data, error } = await supabaseAdmin
     .from("credit_request_photos")
-    .select("id,file_name,public_url,storage_path,created_at")
+    .select("id,file_name,public_url,storage_path,created_at,removed_from_cart_at")
     .eq("draft_id", draftId)
+    .is("removed_from_cart_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {

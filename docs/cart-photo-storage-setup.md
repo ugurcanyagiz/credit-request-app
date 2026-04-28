@@ -2,6 +2,7 @@
 
 This feature uploads cart photos to Supabase Storage and persists photo mappings in SQL so photos survive modal close/reopen and page refresh.
 Photos are uploaded as soon as users pick them in the cart UI, and those uploaded photos are reloaded from SQL by stable cart draft id.
+If users remove photos from the cart, rows are soft-removed (`removed_from_cart_at`) instead of hard-deleted, so stored public links remain reachable for audit/history use cases.
 
 ## Minimum required Supabase objects
 
@@ -65,11 +66,16 @@ create table if not exists public.credit_request_photos (
   file_name text not null,
   public_url text not null,
   storage_path text not null unique,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  removed_from_cart_at timestamptz null
 );
 
 create index if not exists credit_request_photos_draft_id_created_at_idx
   on public.credit_request_photos (draft_id, created_at desc);
+
+-- For existing databases, run this once:
+alter table public.credit_request_photos
+  add column if not exists removed_from_cart_at timestamptz null;
 ```
 
 ## Required environment variables
