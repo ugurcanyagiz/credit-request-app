@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
-import { ensureCartDraftId, listDraftPhotos, resolveUserId } from "@/lib/cart-draft";
+import { ensureCartDraftId, isMissingRemovedFromCartColumnError, listDraftPhotos, resolveUserId } from "@/lib/cart-draft";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { buildSupabasePublicObjectUrl } from "@/lib/supabase-storage-url";
 
@@ -11,6 +11,8 @@ const CART_PHOTO_FOLDER = "cart-photos";
 const ACCEPTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_FILES_PER_UPLOAD = 8;
+const SOFT_DELETE_MIGRATION_HINT =
+  "Database migration required: add removed_from_cart_at column to public.credit_request_photos.";
 
 type PhotoResponse = {
   id: string;
@@ -191,6 +193,9 @@ export async function DELETE(request: Request) {
       .eq("draft_id", draftId);
 
     if (deleteError) {
+      if (isMissingRemovedFromCartColumnError(deleteError)) {
+        return Response.json({ error: SOFT_DELETE_MIGRATION_HINT }, { status: 500 });
+      }
       console.error("Failed to delete cart photo mapping", deleteError);
       return Response.json({ error: "Failed to delete cart photo" }, { status: 500 });
     }

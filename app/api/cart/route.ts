@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { isMissingRemovedFromCartColumnError } from "@/lib/cart-draft";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import type { Session } from "next-auth";
 
@@ -18,6 +19,9 @@ type CartInsertPayload = {
   credit_type?: "case" | "piece";
   credit_amount?: number;
 };
+
+const SOFT_DELETE_MIGRATION_HINT =
+  "Database migration required: add removed_from_cart_at column to public.credit_request_photos.";
 
 async function resolveUserId(session: Session): Promise<string | null> {
   const userId = session.user?.id;
@@ -198,6 +202,9 @@ export async function DELETE(request: Request) {
       .eq("draft_id", draft.id);
 
     if (photoRowsDeleteError) {
+      if (isMissingRemovedFromCartColumnError(photoRowsDeleteError)) {
+        return Response.json({ error: SOFT_DELETE_MIGRATION_HINT }, { status: 500 });
+      }
       console.error("Failed to delete cart photo mappings during clear-all", photoRowsDeleteError);
       return Response.json({ error: "Failed to clear cart photos" }, { status: 500 });
     }
