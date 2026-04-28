@@ -23,6 +23,7 @@ type ReasonOption =
   | "Wrong Item"
   | "Expired"
   | "Missing"
+  | "Refused"
   | "Other";
 
 const REASON_OPTIONS: ReasonOption[] = [
@@ -34,6 +35,7 @@ const REASON_OPTIONS: ReasonOption[] = [
   "Wrong Item",
   "Expired",
   "Missing",
+  "Refused",
   "Other",
 ];
 
