@@ -14,7 +14,16 @@ type InvoiceItem = {
 };
 
 type CreditType = "case" | "piece";
-type ReasonOption = "Damaged" | "Molded" | "Leaking" | "Sugared" | "Spoiled" | "Wrong Item" | "Expired" | "Other";
+type ReasonOption =
+  | "Damaged"
+  | "Molded"
+  | "Leaking"
+  | "Sugared"
+  | "Spoiled"
+  | "Wrong Item"
+  | "Expired"
+  | "Missing"
+  | "Other";
 
 const REASON_OPTIONS: ReasonOption[] = [
   "Damaged",
@@ -24,6 +33,7 @@ const REASON_OPTIONS: ReasonOption[] = [
   "Spoiled",
   "Wrong Item",
   "Expired",
+  "Missing",
   "Other",
 ];
 
