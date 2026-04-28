@@ -130,6 +130,7 @@ export async function POST(request: Request) {
           file_name: file.name,
           public_url: publicUrl,
           storage_path: storagePath,
+          removed_from_cart_at: null,
         })
         .select("id,file_name,public_url,storage_path,created_at")
         .single();
@@ -173,25 +174,19 @@ export async function DELETE(request: Request) {
 
     const { data: existingPhoto, error: fetchError } = await supabaseAdmin
       .from("credit_request_photos")
-      .select("id,storage_path")
+      .select("id")
       .eq("id", payload.photoId)
       .eq("draft_id", draftId)
+      .is("removed_from_cart_at", null)
       .single();
 
     if (fetchError || !existingPhoto) {
       return Response.json({ error: "Photo not found" }, { status: 404 });
     }
 
-    const { error: storageDeleteError } = await supabaseAdmin.storage.from(PHOTO_BUCKET).remove([existingPhoto.storage_path]);
-
-    if (storageDeleteError) {
-      console.error("Failed to delete cart photo file", storageDeleteError);
-      return Response.json({ error: "Failed to delete cart photo" }, { status: 500 });
-    }
-
     const { error: deleteError } = await supabaseAdmin
       .from("credit_request_photos")
-      .delete()
+      .update({ removed_from_cart_at: new Date().toISOString() })
       .eq("id", existingPhoto.id)
       .eq("draft_id", draftId);
 
