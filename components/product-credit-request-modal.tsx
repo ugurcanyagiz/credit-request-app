@@ -188,6 +188,11 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
   }
 
   function onPickPicture() {
+    const isConfirmed = window.confirm("Please make sure the product lot number is clearly visible in the photo before continuing.");
+    if (!isConfirmed) {
+      return;
+    }
+
     pictureInputRef.current?.click();
   }
 
