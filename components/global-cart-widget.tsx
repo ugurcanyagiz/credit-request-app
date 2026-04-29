@@ -199,6 +199,11 @@ export function GlobalCartWidget() {
   }
 
   function onPickPictures() {
+    const isConfirmed = window.confirm("Please make sure the product lot number is clearly visible in the photo before continuing.");
+    if (!isConfirmed) {
+      return;
+    }
+
     fileInputRef.current?.click();
   }
 
