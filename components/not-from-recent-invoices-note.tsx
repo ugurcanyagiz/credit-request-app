@@ -131,7 +131,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
   }
 
   function onPickPicture() {
-    const isConfirmed = window.confirm("Please make sure the product lot number is clearly visible in the photo before continuing.");
+    const isConfirmed = window.confirm("Please make sure LOT NUMBER is visible.");
     if (!isConfirmed) {
       return;
     }
