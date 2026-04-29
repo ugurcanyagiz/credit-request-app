@@ -333,7 +333,7 @@ export function GlobalCartWidget() {
       const yy = String(now.getFullYear()).slice(-2);
       const todayMMDDYY = `${mm}${dd}${yy}`;
       const customerCode = cartRows[0]?.customer_code?.trim() || "UNKNOWN";
-      const subject = `Credit Request - ${customerCode}-${todayMMDDYY}`;
+      const subject = `Credit request: ${customerCode}-${todayMMDDYY}`;
 
       const formData = new FormData();
       formData.set("cartRows", JSON.stringify(cartRows));
