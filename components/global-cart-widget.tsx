@@ -199,6 +199,11 @@ export function GlobalCartWidget() {
   }
 
   function onPickPictures() {
+    const isConfirmed = window.confirm("Please make sure LOT NUMBER is visible.");
+    if (!isConfirmed) {
+      return;
+    }
+
     fileInputRef.current?.click();
   }
 
