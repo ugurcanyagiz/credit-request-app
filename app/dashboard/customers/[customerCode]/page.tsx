@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NotFromRecentInvoicesNote } from "@/components/not-from-recent-invoices-note";
 import { CustomerInvoicesView } from "@/components/customer-invoices-view";
@@ -19,6 +20,7 @@ type CustomerInvoicesPageProps = {
 
 export default async function CustomerInvoicesPage({ params }: CustomerInvoicesPageProps) {
   const session = await getServerSession(authOptions);
+  const isAdmin = isAdminUser(session?.user?.name);
 
   if (!session?.user?.salespersonName) {
     redirect("/");
@@ -36,13 +38,17 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
 
   while (hasMore) {
     const to = from + pageSize - 1;
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("credit_rows")
       .select("customer_name,invoice_no,invoice_date")
-      .eq("salesperson", session.user.salespersonName)
       .eq("customer_code", customerCode)
       .order("invoice_no", { ascending: true })
       .range(from, to);
+    if (!isAdmin) {
+      query = query.eq("salesperson", session.user.salespersonName);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Failed to fetch customer invoices", error);

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { InvoiceItemsTable } from "@/components/invoice-items-table";
 
@@ -25,6 +26,7 @@ type InvoiceItemsPageProps = {
 
 export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps) {
   const session = await getServerSession(authOptions);
+  const isAdmin = isAdminUser(session?.user?.name);
 
   if (!session?.user?.salespersonName) {
     redirect("/");
@@ -68,16 +70,20 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
 
   while (hasMore) {
     const to = from + pageSize - 1;
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("credit_rows")
       .select(
         "customer_name,invoice_date,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price",
       )
-      .eq("salesperson", session.user.salespersonName)
       .eq("customer_code", customerCode)
       .eq("invoice_no", invoiceNo)
       .order("item_no", { ascending: true })
       .range(from, to);
+    if (!isAdmin) {
+      query = query.eq("salesperson", session.user.salespersonName);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Failed to fetch invoice items", error);
