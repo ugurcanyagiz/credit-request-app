@@ -97,10 +97,12 @@ export function buildCreditRequestDraftText({
   cartRows,
   uploadedPhotos,
   customerName,
+  notes,
 }: {
   cartRows: CreditRequestCartItem[];
   uploadedPhotos: UploadedPhotoReference[];
   customerName?: string | null;
+  notes?: string;
 }) {
   const nonNoteItems = cartRows.filter((item) => !isEmailStandaloneReasonRow(item.item_descp));
   const reasonRowsByKey = new Map<string, string[]>();
@@ -152,6 +154,7 @@ export function buildCreditRequestDraftText({
   const textLines = [
     "Hello Credit Team,",
     "",
+    ...(notes && notes.trim().length > 0 ? [notes.trim(), ""] : []),
     "Please review the credit request details below.",
     "",
     `Customer Code: ${uniqueCustomers.join(", ") || "-"}`,
