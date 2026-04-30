@@ -127,6 +127,7 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
                   >
                     <p className="text-zinc-600">Invoice No: {item.invoice_no}</p>
                     <p className="mb-2 text-zinc-600">Invoice Date: {item.invoice_date}</p>
+                    <p className="mb-2 text-zinc-600">Lot Number: {item.sales_lot_no}</p>
                     <p className="font-medium text-blue-700">{item.item_no}</p>
                     <p className="text-zinc-700">{item.item_descp}</p>
                   </button>
