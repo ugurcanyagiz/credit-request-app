@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type CreditRowCustomer = {
@@ -11,6 +12,7 @@ type CreditRowCustomer = {
 export async function GET() {
   const session = await getServerSession(authOptions);
   const salespersonName = session?.user?.salespersonName;
+  const isAdmin = isAdminUser(session?.user?.name);
 
   if (!salespersonName) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,12 +26,16 @@ export async function GET() {
 
   while (hasMore) {
     const to = from + pageSize - 1;
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("credit_rows")
       .select("customer_code,customer_name")
-      .eq("salesperson", salespersonName)
       .order("customer_code", { ascending: true })
       .range(from, to);
+    if (!isAdmin) {
+      query = query.eq("salesperson", salespersonName);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Failed to fetch customers", error);

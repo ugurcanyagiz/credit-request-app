@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type CreditRowSearchResult = {
@@ -37,6 +38,7 @@ export async function GET(
 ) {
   const session = await getServerSession(authOptions);
   const salespersonName = session?.user?.salespersonName;
+  const isAdmin = isAdminUser(session?.user?.name);
 
   if (!salespersonName) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -51,16 +53,17 @@ export async function GET(
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  let queryBuilder = supabaseAdmin
     .from("credit_rows")
     .select(
       "invoice_no,invoice_date,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price",
     )
-    .eq("salesperson", salespersonName)
     .eq("customer_code", customerCode)
-    .or(`item_no.ilike.%${query}%,item_descp.ilike.%${query}%`)
-    .order("invoice_no", { ascending: false })
-    .limit(50);
+    .or(`item_no.ilike.%${query}%,item_descp.ilike.%${query}%`);
+  if (!isAdmin) {
+    queryBuilder = queryBuilder.eq("salesperson", salespersonName);
+  }
+  const { data, error } = await queryBuilder.order("invoice_no", { ascending: false }).limit(50);
 
   if (error) {
     console.error("Failed to search customer invoice items", error);
