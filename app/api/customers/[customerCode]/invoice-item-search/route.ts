@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type CreditRowSearchResult = {
@@ -37,6 +38,7 @@ export async function GET(
 ) {
   const session = await getServerSession(authOptions);
   const salespersonName = session?.user?.salespersonName;
+  const isAdmin = isAdminUser(session?.user?.name);
 
   if (!salespersonName) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,23 +46,28 @@ export async function GET(
 
   const { customerCode: rawCustomerCode } = await context.params;
   const customerCode = decodeURIComponent(rawCustomerCode);
-  const query = new URL(request.url).searchParams.get("query")?.trim() ?? "";
+  const searchParams = new URL(request.url).searchParams;
+  const query = searchParams.get("query")?.trim() ?? "";
+  const selectedSalesperson = searchParams.get("salesperson")?.trim();
 
   if (query.length < 2) {
     return Response.json({ items: [] });
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  let queryBuilder = supabaseAdmin
     .from("credit_rows")
     .select(
       "invoice_no,invoice_date,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price",
     )
-    .eq("salesperson", salespersonName)
     .eq("customer_code", customerCode)
-    .or(`item_no.ilike.%${query}%,item_descp.ilike.%${query}%`)
-    .order("invoice_no", { ascending: false })
-    .limit(50);
+    .or(`item_no.ilike.%${query}%,item_descp.ilike.%${query}%`);
+  const scopedSalesperson = isAdmin ? selectedSalesperson : salespersonName;
+  if (!scopedSalesperson) {
+    return Response.json({ items: [] });
+  }
+  queryBuilder = queryBuilder.eq("salesperson", scopedSalesperson);
+  const { data, error } = await queryBuilder.order("invoice_no", { ascending: false }).limit(50);
 
   if (error) {
     console.error("Failed to search customer invoice items", error);

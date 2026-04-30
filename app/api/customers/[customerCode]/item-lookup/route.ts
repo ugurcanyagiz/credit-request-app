@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type CreditRowItem = {
@@ -11,6 +12,7 @@ type CreditRowItem = {
 export async function GET(request: Request, context: RouteContext<"/api/customers/[customerCode]/item-lookup">) {
   const session = await getServerSession(authOptions);
   const salespersonName = session?.user?.salespersonName;
+  const isAdmin = isAdminUser(session?.user?.name);
 
   if (!salespersonName) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,6 +21,7 @@ export async function GET(request: Request, context: RouteContext<"/api/customer
   const { customerCode: rawCustomerCode } = await context.params;
   const customerCode = decodeURIComponent(rawCustomerCode);
   const searchParams = new URL(request.url).searchParams;
+  const selectedSalesperson = searchParams.get("salesperson")?.trim();
   const query = searchParams.get("query")?.trim() ?? "";
   const searchBy = searchParams.get("searchBy");
 
@@ -27,11 +30,15 @@ export async function GET(request: Request, context: RouteContext<"/api/customer
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const baseQuery = supabaseAdmin
+  let baseQuery = supabaseAdmin
     .from("credit_rows")
     .select("item_no,item_descp")
-    .eq("salesperson", salespersonName)
     .eq("customer_code", customerCode);
+  const scopedSalesperson = isAdmin ? selectedSalesperson : salespersonName;
+  if (!scopedSalesperson) {
+    return Response.json({ items: [] });
+  }
+  baseQuery = baseQuery.eq("salesperson", scopedSalesperson);
   const filteredQuery =
     searchBy === "item_descp"
       ? baseQuery.ilike("item_descp", `%${query}%`)

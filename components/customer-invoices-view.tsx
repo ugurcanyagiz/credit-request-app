@@ -18,9 +18,10 @@ type SearchResultItem = InvoiceItem & {
 type CustomerInvoicesViewProps = {
   customerCode: string;
   invoices: InvoiceSummary[];
+  salesperson?: string;
 };
 
-export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoicesViewProps) {
+export function CustomerInvoicesView({ customerCode, invoices, salesperson }: CustomerInvoicesViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -58,10 +59,13 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
 
     debounceTimeoutRef.current = window.setTimeout(async () => {
       try {
-        const response = await fetch(
-          `/api/customers/${encodeURIComponent(customerCode)}/invoice-item-search?query=${encodeURIComponent(normalizedSearchTerm)}`,
-          { signal: abortController.signal },
-        );
+        const params = new URLSearchParams({ query: normalizedSearchTerm });
+        if (salesperson) {
+          params.set("salesperson", salesperson);
+        }
+        const response = await fetch(`/api/customers/${encodeURIComponent(customerCode)}/invoice-item-search?${params.toString()}`, {
+          signal: abortController.signal,
+        });
 
         if (!response.ok) {
           setSearchError("Failed to search items.");
@@ -145,7 +149,7 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
           {invoices.map((invoice) => (
             <li key={invoice.invoice_no} className="rounded-md border border-zinc-200 text-sm">
               <Link
-                href={`/dashboard/customers/${encodeURIComponent(customerCode)}/invoices/${encodeURIComponent(invoice.invoice_no)}`}
+                href={`/dashboard/customers/${encodeURIComponent(customerCode)}/invoices/${encodeURIComponent(invoice.invoice_no)}${salesperson ? `?salesperson=${encodeURIComponent(salesperson)}` : ""}`}
                 className="block px-3 py-2 transition-colors hover:bg-zinc-50"
               >
                 <p className="font-medium">Invoice No: {invoice.invoice_no}</p>
