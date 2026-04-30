@@ -36,6 +36,11 @@ export async function GET(request: Request) {
       .select("customer_code,customer_name")
       .order("customer_code", { ascending: true })
       .range(from, to);
+    if (!isAdmin) {
+      query = query.eq("salesperson", salespersonName);
+    }
+
+    const { data, error } = await query;
 
     query = query.eq("salesperson", isAdmin ? selectedSalesperson! : salespersonName);
 
