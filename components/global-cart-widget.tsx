@@ -79,6 +79,7 @@ export function GlobalCartWidget() {
   const [isRemovingAll, setIsRemovingAll] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [removeAllError, setRemoveAllError] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cartRows = useMemo(() => {
@@ -297,6 +298,7 @@ export function GlobalCartWidget() {
       setSelectedPicture(null);
       setItems([]);
       setPictures([]);
+      setNotes("");
       setPhotoError(null);
       await loadCart();
       await loadPhotos();
@@ -338,6 +340,7 @@ export function GlobalCartWidget() {
       const formData = new FormData();
       formData.set("cartRows", JSON.stringify(cartRows));
       formData.set("subject", subject);
+      formData.set("notes", notes.trim());
 
       const response = await fetch("/api/cart/credit-request-draft", {
         method: "POST",
@@ -463,6 +466,7 @@ export function GlobalCartWidget() {
                   </button>
                 </div>
               </div>
+
             </div>
 
             <div className="space-y-6 px-6 py-6 md:px-8">
@@ -597,6 +601,16 @@ export function GlobalCartWidget() {
                 ) : null}
               </div>
 
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-800">Notes:</p>
+                <textarea
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  rows={4}
+                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-0 transition focus:border-slate-400"
+                />
+              </div>
+
               {sendError ? (
                 <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{sendError}</p>
               ) : null}
@@ -605,9 +619,6 @@ export function GlobalCartWidget() {
                   {removeAllError}
                 </p>
               ) : null}
-              <p className="text-xs text-slate-500">
-                Recipient: <strong>credit@turkanafood.com</strong>. This opens your default email app with a ready-to-send draft.
-              </p>
             </div>
           </div>
 

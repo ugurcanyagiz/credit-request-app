@@ -87,7 +87,9 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const cartRowsRaw = formData.get("cartRows");
   const subjectRaw = formData.get("subject");
+  const notesRaw = formData.get("notes");
   const subject = typeof subjectRaw === "string" && subjectRaw.trim().length > 0 ? subjectRaw.trim() : null;
+  const notes = typeof notesRaw === "string" ? notesRaw.trim() : "";
 
   if (typeof cartRowsRaw !== "string") {
     return Response.json({ error: "Missing cart rows payload" }, { status: 400 });
@@ -132,6 +134,7 @@ export async function POST(request: Request) {
       cartRows,
       uploadedPhotos: uploadedPhotos.map((photo) => ({ fileName: photo.fileName, publicUrl: photo.publicUrl })),
       customerName,
+      notes,
     });
     const mailtoDraft = buildCreditRequestMailtoUrl({
       subject,
