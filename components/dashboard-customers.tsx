@@ -9,18 +9,69 @@ type Customer = {
   customer_name: string;
 };
 
-export function DashboardCustomers() {
+type DashboardCustomersProps = {
+  isAdmin: boolean;
+  defaultSalesperson: string;
+};
+
+export function DashboardCustomers({ isAdmin, defaultSalesperson }: DashboardCustomersProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [salespersons, setSalespersons] = useState<string[]>([]);
+  const [selectedSalesperson, setSelectedSalesperson] = useState<string>(isAdmin ? "" : defaultSalesperson);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!isAdmin);
 
   useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadSalespersons() {
+      try {
+        const response = await fetch("/api/salespersons", { cache: "no-store" });
+        if (!response.ok) {
+          if (isMounted) {
+            setError("Failed to load salespersons.");
+          }
+          return;
+        }
+
+        const payload = (await response.json()) as { salespersons?: string[] };
+        if (isMounted) {
+          setSalespersons(payload.salespersons ?? []);
+        }
+      } catch {
+        if (isMounted) {
+          setError("Failed to load salespersons.");
+        }
+      }
+    }
+
+    void loadSalespersons();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin && !selectedSalesperson) {
+      return;
+    }
+
     let isMounted = true;
 
     async function loadCustomers() {
       try {
-        const response = await fetch("/api/customers", {
+        const params = new URLSearchParams();
+        if (selectedSalesperson) {
+          params.set("salesperson", selectedSalesperson);
+        }
+
+        const response = await fetch(`/api/customers?${params.toString()}`, {
           cache: "no-store",
         });
 
@@ -52,7 +103,7 @@ export function DashboardCustomers() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isAdmin, selectedSalesperson]);
 
   const filteredCustomers = useMemo(() => {
     const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
@@ -65,10 +116,7 @@ export function DashboardCustomers() {
       const customerCode = customer.customer_code.toLocaleLowerCase();
       const customerName = customer.customer_name.toLocaleLowerCase();
 
-      return (
-        customerCode.includes(normalizedSearchTerm) ||
-        customerName.includes(normalizedSearchTerm)
-      );
+      return customerCode.includes(normalizedSearchTerm) || customerName.includes(normalizedSearchTerm);
     });
   }, [customers, searchTerm]);
 
@@ -85,13 +133,31 @@ export function DashboardCustomers() {
         </button>
       </div>
 
+      {isAdmin ? (
+        <div>
+          <label htmlFor="salesperson-select" className="mb-1 block text-sm font-medium text-zinc-700">
+            Salesperson seçin
+          </label>
+          <select
+            id="salesperson-select"
+            value={selectedSalesperson}
+            onChange={(event) => setSelectedSalesperson(event.target.value)}
+            className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
+          >
+            <option value="">Önce bir salesperson seçin</option>
+            {salespersons.map((salesperson) => (
+              <option key={salesperson} value={salesperson}>
+                {salesperson}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <div>
-        <label
-          htmlFor="customer-search"
-          className="mb-1 block text-sm font-medium text-zinc-700"
-        >
+        <label htmlFor="customer-search" className="mb-1 block text-sm font-medium text-zinc-700">
           Search customer
         </label>
         <input
@@ -100,34 +166,26 @@ export function DashboardCustomers() {
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search by customer code or name..."
-          disabled={isLoading}
+          disabled={isLoading || (isAdmin && !selectedSalesperson)}
           aria-busy={isLoading}
           className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
         />
       </div>
 
-      {isLoading ? (
-        <div aria-live="polite" className="space-y-2">
-          <p className="text-xs tracking-wide text-zinc-500">Loading customers…</p>
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div
-              key={`customer-loading-${index}`}
-              className="rounded-md border border-zinc-200 px-3 py-2"
-            >
-              <div className="h-4 w-24 animate-pulse rounded bg-zinc-200" />
-              <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-zinc-100" />
-            </div>
-          ))}
-        </div>
+      {isAdmin && !selectedSalesperson ? (
+        <p className="text-sm text-zinc-600">Müşteri listesini görmek için bir salesperson seçin.</p>
+      ) : isLoading ? (
+        <p className="text-xs tracking-wide text-zinc-500">Loading customers…</p>
       ) : (
         <ul className="space-y-2">
           {filteredCustomers.map((customer) => (
-            <li
-              key={customer.customer_code}
-              className="rounded-md border border-zinc-200 text-sm"
-            >
+            <li key={customer.customer_code} className="rounded-md border border-zinc-200 text-sm">
               <Link
-                href={`/dashboard/customers/${encodeURIComponent(customer.customer_code)}`}
+                href={`/dashboard/customers/${encodeURIComponent(customer.customer_code)}${
+                  isAdmin && selectedSalesperson
+                    ? `?salesperson=${encodeURIComponent(selectedSalesperson)}`
+                    : ""
+                }`}
                 className="block px-3 py-2 transition-colors hover:bg-zinc-50"
               >
                 <p className="font-medium">{customer.customer_code}</p>
@@ -137,12 +195,6 @@ export function DashboardCustomers() {
           ))}
         </ul>
       )}
-
-      {!isLoading && !error && filteredCustomers.length === 0 ? (
-        <p className="text-sm text-zinc-600">
-          No customers found for this search.
-        </p>
-      ) : null}
     </section>
   );
 }

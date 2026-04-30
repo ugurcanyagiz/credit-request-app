@@ -16,9 +16,10 @@ type CreditRowInvoice = {
 
 type CustomerInvoicesPageProps = {
   params: Promise<{ customerCode: string }>;
+  searchParams: Promise<{ salesperson?: string }>;
 };
 
-export default async function CustomerInvoicesPage({ params }: CustomerInvoicesPageProps) {
+export default async function CustomerInvoicesPage({ params, searchParams }: CustomerInvoicesPageProps) {
   const session = await getServerSession(authOptions);
   const isAdmin = isAdminUser(session?.user?.name);
 
@@ -27,6 +28,13 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
   }
 
   const { customerCode: rawCustomerCode } = await params;
+  const { salesperson: salespersonParam } = await searchParams;
+  const scopedSalesperson = isAdmin ? salespersonParam?.trim() : session.user.salespersonName;
+
+  if (!scopedSalesperson) {
+    redirect("/dashboard");
+  }
+
   const customerCode = decodeURIComponent(rawCustomerCode);
 
   const supabaseAdmin = getSupabaseAdmin();
@@ -44,9 +52,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
       .eq("customer_code", customerCode)
       .order("invoice_no", { ascending: true })
       .range(from, to);
-    if (!isAdmin) {
-      query = query.eq("salesperson", session.user.salespersonName);
-    }
+    query = query.eq("salesperson", scopedSalesperson);
 
     const { data, error } = await query;
 
@@ -96,9 +102,9 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
         </Link>
       </div>
 
-      <CustomerInvoicesView customerCode={customerCode} invoices={invoices} />
+      <CustomerInvoicesView customerCode={customerCode} invoices={invoices} salesperson={scopedSalesperson} />
 
-      <NotFromRecentInvoicesNote customerCode={customerCode} />
+      <NotFromRecentInvoicesNote customerCode={customerCode} salesperson={scopedSalesperson} />
     </main>
   );
 }

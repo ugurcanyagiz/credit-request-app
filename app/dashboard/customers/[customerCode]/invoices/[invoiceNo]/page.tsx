@@ -22,9 +22,10 @@ type InvoiceItemRow = {
 
 type InvoiceItemsPageProps = {
   params: Promise<{ customerCode: string; invoiceNo: string }>;
+  searchParams: Promise<{ salesperson?: string }>;
 };
 
-export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps) {
+export default async function InvoiceItemsPage({ params, searchParams }: InvoiceItemsPageProps) {
   const session = await getServerSession(authOptions);
   const isAdmin = isAdminUser(session?.user?.name);
 
@@ -33,6 +34,13 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
   }
 
   const { customerCode: rawCustomerCode, invoiceNo: rawInvoiceNo } = await params;
+  const { salesperson: salespersonParam } = await searchParams;
+  const scopedSalesperson = isAdmin ? salespersonParam?.trim() : session.user.salespersonName;
+
+  if (!scopedSalesperson) {
+    redirect("/dashboard");
+  }
+
   const customerCode = decodeURIComponent(rawCustomerCode);
   const invoiceNo = decodeURIComponent(rawInvoiceNo);
 
@@ -79,9 +87,7 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
       .eq("invoice_no", invoiceNo)
       .order("item_no", { ascending: true })
       .range(from, to);
-    if (!isAdmin) {
-      query = query.eq("salesperson", session.user.salespersonName);
-    }
+    query = query.eq("salesperson", scopedSalesperson);
 
     const { data, error } = await query;
 
@@ -147,7 +153,7 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
           <p className="text-sm text-zinc-600">Invoice Date: {invoiceDate ?? "-"}</p>
         </div>
         <Link
-          href={`/dashboard/customers/${encodeURIComponent(customerCode)}`}
+          href={`/dashboard/customers/${encodeURIComponent(customerCode)}?salesperson=${encodeURIComponent(scopedSalesperson)}`}
           className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
         >
           Back

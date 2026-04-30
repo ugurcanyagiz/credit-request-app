@@ -7,6 +7,7 @@ type CreditType = "case" | "piece";
 
 type NotFromRecentInvoicesNoteProps = {
   customerCode: string;
+  salesperson?: string;
 };
 
 type ItemLookupOption = {
@@ -16,7 +17,7 @@ type ItemLookupOption = {
 
 type LookupSearchBy = "item_no" | "item_descp";
 
-export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoicesNoteProps) {
+export function NotFromRecentInvoicesNote({ customerCode, salesperson }: NotFromRecentInvoicesNoteProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [invoiceNo, setInvoiceNo] = useState("");
   const [itemNo, setItemNo] = useState("");
@@ -81,10 +82,17 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
       const controller = new AbortController();
       lookupAbortControllerRef.current = controller;
 
-      const response = await fetch(
-        `/api/customers/${encodeURIComponent(customerCode)}/item-lookup?query=${encodeURIComponent(normalizedSearch)}&searchBy=${encodeURIComponent(searchBy)}`,
-        { signal: controller.signal },
-      ).catch(() => null);
+      const params = new URLSearchParams({
+        query: normalizedSearch,
+        searchBy,
+      });
+      if (salesperson) {
+        params.set("salesperson", salesperson);
+      }
+
+      const response = await fetch(`/api/customers/${encodeURIComponent(customerCode)}/item-lookup?${params.toString()}`, {
+        signal: controller.signal,
+      }).catch(() => null);
 
       if (controller.signal.aborted) {
         return;

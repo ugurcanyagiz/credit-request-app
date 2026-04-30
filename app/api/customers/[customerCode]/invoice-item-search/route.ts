@@ -46,7 +46,9 @@ export async function GET(
 
   const { customerCode: rawCustomerCode } = await context.params;
   const customerCode = decodeURIComponent(rawCustomerCode);
-  const query = new URL(request.url).searchParams.get("query")?.trim() ?? "";
+  const searchParams = new URL(request.url).searchParams;
+  const query = searchParams.get("query")?.trim() ?? "";
+  const selectedSalesperson = searchParams.get("salesperson")?.trim();
 
   if (query.length < 2) {
     return Response.json({ items: [] });
@@ -60,9 +62,11 @@ export async function GET(
     )
     .eq("customer_code", customerCode)
     .or(`item_no.ilike.%${query}%,item_descp.ilike.%${query}%`);
-  if (!isAdmin) {
-    queryBuilder = queryBuilder.eq("salesperson", salespersonName);
+  const scopedSalesperson = isAdmin ? selectedSalesperson : salespersonName;
+  if (!scopedSalesperson) {
+    return Response.json({ items: [] });
   }
+  queryBuilder = queryBuilder.eq("salesperson", scopedSalesperson);
   const { data, error } = await queryBuilder.order("invoice_no", { ascending: false }).limit(50);
 
   if (error) {

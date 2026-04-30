@@ -9,13 +9,18 @@ type CreditRowCustomer = {
   customer_name: string | null;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   const salespersonName = session?.user?.salespersonName;
   const isAdmin = isAdminUser(session?.user?.name);
 
   if (!salespersonName) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const selectedSalesperson = new URL(request.url).searchParams.get("salesperson")?.trim();
+  if (isAdmin && !selectedSalesperson) {
+    return Response.json({ customers: [] });
   }
 
   const supabaseAdmin = getSupabaseAdmin();
@@ -34,6 +39,10 @@ export async function GET() {
     if (!isAdmin) {
       query = query.eq("salesperson", salespersonName);
     }
+
+    const { data, error } = await query;
+
+    query = query.eq("salesperson", isAdmin ? selectedSalesperson! : salespersonName);
 
     const { data, error } = await query;
 

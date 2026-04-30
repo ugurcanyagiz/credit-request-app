@@ -21,6 +21,7 @@ export async function GET(request: Request, context: RouteContext<"/api/customer
   const { customerCode: rawCustomerCode } = await context.params;
   const customerCode = decodeURIComponent(rawCustomerCode);
   const searchParams = new URL(request.url).searchParams;
+  const selectedSalesperson = searchParams.get("salesperson")?.trim();
   const query = searchParams.get("query")?.trim() ?? "";
   const searchBy = searchParams.get("searchBy");
 
@@ -33,9 +34,11 @@ export async function GET(request: Request, context: RouteContext<"/api/customer
     .from("credit_rows")
     .select("item_no,item_descp")
     .eq("customer_code", customerCode);
-  if (!isAdmin) {
-    baseQuery = baseQuery.eq("salesperson", salespersonName);
+  const scopedSalesperson = isAdmin ? selectedSalesperson : salespersonName;
+  if (!scopedSalesperson) {
+    return Response.json({ items: [] });
   }
+  baseQuery = baseQuery.eq("salesperson", scopedSalesperson);
   const filteredQuery =
     searchBy === "item_descp"
       ? baseQuery.ilike("item_descp", `%${query}%`)
