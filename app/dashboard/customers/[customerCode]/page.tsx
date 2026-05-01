@@ -7,6 +7,7 @@ import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NotFromRecentInvoicesNote } from "@/components/not-from-recent-invoices-note";
 import { CustomerInvoicesView } from "@/components/customer-invoices-view";
+import { CustomerCreditMemosView } from "@/components/customer-credit-memos-view";
 
 type CreditRowInvoice = {
   customer_name: string | null;
@@ -22,6 +23,12 @@ type CreditMemoSummaryRow = {
 };
 
 type CustomerCreditMemoSummaryRow = {
+  credit_memo_no: string | null;
+  credit_memo_date: string | null;
+};
+
+type CreditMemoSummary = {
+  customer_name: string | null;
   credit_memo_no: string | null;
   credit_memo_date: string | null;
 };
@@ -131,6 +138,49 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
   }
 
   const invoices = Array.from(invoicesByNo.values());
+  from = 0;
+  hasMore = true;
+
+  while (hasMore) {
+    const to = from + pageSize - 1;
+    let query = supabaseAdmin
+      .from("credit_memo_rows")
+      .select("customer_name,credit_memo_no,credit_memo_date")
+      .eq("customer_code", customerCode)
+      .order("credit_memo_no", { ascending: false })
+      .range(from, to);
+
+    if (!isAdmin) {
+      query = query.eq("salesperson", session.user.salespersonName);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Failed to fetch customer credit memos", error);
+      throw new Error("Failed to fetch customer credit memos");
+    }
+
+    const rows = (data as CreditMemoSummary[]) ?? [];
+
+    for (const row of rows) {
+      if (!customerName && row.customer_name) {
+        customerName = row.customer_name;
+      }
+
+      if (row.credit_memo_no && row.credit_memo_date && !creditMemosByNo.has(row.credit_memo_no)) {
+        creditMemosByNo.set(row.credit_memo_no, {
+          credit_memo_no: row.credit_memo_no,
+          credit_memo_date: row.credit_memo_date,
+        });
+      }
+    }
+
+    hasMore = rows.length === pageSize;
+    from += pageSize;
+  }
+
+
   const creditMemos = Array.from(creditMemosByNo.values());
 
   return (
@@ -150,6 +200,8 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
       </div>
 
       <CustomerInvoicesView customerCode={customerCode} invoices={invoices} creditMemos={creditMemos} />
+
+      <CustomerCreditMemosView customerCode={customerCode} creditMemos={creditMemos} />
 
       <NotFromRecentInvoicesNote customerCode={customerCode} />
     </main>

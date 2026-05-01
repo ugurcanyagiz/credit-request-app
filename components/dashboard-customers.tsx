@@ -77,7 +77,7 @@ export function DashboardCustomers() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Customers</h2>
-          <p className="text-xs text-zinc-500">Browse invoices by customer.</p>
+          <p className="text-xs text-zinc-500">Browse invoices and credit memos by customer.</p>
         </div>
         <button
           type="button"
