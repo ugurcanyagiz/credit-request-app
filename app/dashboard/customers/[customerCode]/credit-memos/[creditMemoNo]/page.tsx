@@ -47,7 +47,7 @@ export default async function CreditMemoItemsPage({ params }: CreditMemoItemsPag
 
   const supabaseAdmin = getSupabaseAdmin();
   let query = supabaseAdmin
-    .from("credit_rows")
+    .from("credit_memo_rows")
     .select(
       "customer_name,credit_memo_date,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price",
     )
