@@ -12,6 +12,13 @@ type CreditRowInvoice = {
   customer_name: string | null;
   invoice_no: string | null;
   invoice_date: string | null;
+  credit_memo_no: string | null;
+  credit_memo_date: string | null;
+};
+
+type CreditMemoSummaryRow = {
+  credit_memo_no: string | null;
+  credit_memo_date: string | null;
 };
 
 type CreditMemoSummaryRow = {
@@ -46,7 +53,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
     const to = from + pageSize - 1;
     let query = supabaseAdmin
       .from("credit_rows")
-      .select("customer_name,invoice_no,invoice_date")
+      .select("customer_name,invoice_no,invoice_date,credit_memo_no,credit_memo_date")
       .eq("customer_code", customerCode)
       .order("invoice_no", { ascending: true })
       .range(from, to);
