@@ -15,18 +15,12 @@ type SearchResultItem = InvoiceItem & {
   invoice_date: string;
 };
 
-type CreditMemoSummary = {
-  credit_memo_no: string;
-  credit_memo_date: string;
-};
-
 type CustomerInvoicesViewProps = {
   customerCode: string;
   invoices: InvoiceSummary[];
-  creditMemos: CreditMemoSummary[];
 };
 
-export function CustomerInvoicesView({ customerCode, invoices, creditMemos }: CustomerInvoicesViewProps) {
+export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoicesViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -162,22 +156,6 @@ export function CustomerInvoicesView({ customerCode, invoices, creditMemos }: Cu
           ))}
           </ul>
 
-          <div className="pt-4">
-            <h2 className="text-lg font-semibold">Credit Memos</h2>
-            <ul className="mt-2 space-y-2">
-              {creditMemos.map((creditMemo) => (
-                <li key={creditMemo.credit_memo_no} className="rounded-md border border-amber-300 bg-amber-50 text-sm">
-                  <Link
-                    href={`/dashboard/customers/${encodeURIComponent(customerCode)}/credit-memos/${encodeURIComponent(creditMemo.credit_memo_no)}`}
-                    className="block px-3 py-2 transition-colors hover:bg-amber-100"
-                  >
-                    <p className="font-medium">Credit Memo: {creditMemo.credit_memo_no}</p>
-                    <p className="text-zinc-700">Credit Date: {creditMemo.credit_memo_date}</p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
         </>
       )}
 
