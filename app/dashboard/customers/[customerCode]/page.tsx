@@ -7,14 +7,11 @@ import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NotFromRecentInvoicesNote } from "@/components/not-from-recent-invoices-note";
 import { CustomerInvoicesView } from "@/components/customer-invoices-view";
-import { CustomerCreditMemosView } from "@/components/customer-credit-memos-view";
 
 type CreditRowInvoice = {
   customer_name: string | null;
   invoice_no: string | null;
   invoice_date: string | null;
-  credit_memo_no: string | null;
-  credit_memo_date: string | null;
 };
 
 type CustomerInvoicesPageProps = {
@@ -43,7 +40,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
     const to = from + pageSize - 1;
     let query = supabaseAdmin
       .from("credit_rows")
-      .select("customer_name,invoice_no,invoice_date,credit_memo_no,credit_memo_date")
+      .select("customer_name,invoice_no,invoice_date")
       .eq("customer_code", customerCode)
       .order("invoice_no", { ascending: true })
       .range(from, to);
@@ -102,7 +99,6 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
 
       <CustomerInvoicesView customerCode={customerCode} invoices={invoices} />
 
-      <CustomerCreditMemosView customerCode={customerCode} />
 
       <NotFromRecentInvoicesNote customerCode={customerCode} />
     </main>
