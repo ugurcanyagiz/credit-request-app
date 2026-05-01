@@ -12,6 +12,8 @@ type CreditRowInvoice = {
   customer_name: string | null;
   invoice_no: string | null;
   invoice_date: string | null;
+  credit_memo_no: string | null;
+  credit_memo_date: string | null;
 };
 
 type CustomerInvoicesPageProps = {
@@ -35,12 +37,13 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
   let hasMore = true;
   let customerName: string | null = null;
   const invoicesByNo = new Map<string, { invoice_no: string; invoice_date: string }>();
+  const creditMemosByNo = new Map<string, { credit_memo_no: string; credit_memo_date: string }>();
 
   while (hasMore) {
     const to = from + pageSize - 1;
     let query = supabaseAdmin
       .from("credit_rows")
-      .select("customer_name,invoice_no,invoice_date")
+      .select("customer_name,invoice_no,invoice_date,credit_memo_no,credit_memo_date")
       .eq("customer_code", customerCode)
       .order("invoice_no", { ascending: true })
       .range(from, to);
@@ -68,17 +71,25 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
           invoice_date: row.invoice_date,
         });
       }
+
+      if (row.credit_memo_no && row.credit_memo_date && !creditMemosByNo.has(row.credit_memo_no)) {
+        creditMemosByNo.set(row.credit_memo_no, {
+          credit_memo_no: row.credit_memo_no,
+          credit_memo_date: row.credit_memo_date,
+        });
+      }
     }
 
     hasMore = rows.length === pageSize;
     from += pageSize;
   }
 
-  if (!customerName && invoicesByNo.size === 0) {
+  if (!customerName && invoicesByNo.size === 0 && creditMemosByNo.size === 0) {
     notFound();
   }
 
   const invoices = Array.from(invoicesByNo.values());
+  const creditMemos = Array.from(creditMemosByNo.values());
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-10">
@@ -96,7 +107,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
         </Link>
       </div>
 
-      <CustomerInvoicesView customerCode={customerCode} invoices={invoices} />
+      <CustomerInvoicesView customerCode={customerCode} invoices={invoices} creditMemos={creditMemos} />
 
       <NotFromRecentInvoicesNote customerCode={customerCode} />
     </main>
