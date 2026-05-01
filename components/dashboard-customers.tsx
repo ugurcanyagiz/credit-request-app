@@ -88,12 +88,6 @@ export function DashboardCustomers() {
         </button>
       </div>
 
-      <Link
-        href="/dashboard/credit-memos"
-        className="inline-flex w-fit rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-800 transition hover:bg-zinc-100"
-      >
-        Open Credit Memos
-      </Link>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
