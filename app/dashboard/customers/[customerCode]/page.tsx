@@ -14,6 +14,11 @@ type CreditRowInvoice = {
   invoice_date: string | null;
 };
 
+type CustomerCreditMemoSummaryRow = {
+  credit_memo_no: string | null;
+  credit_memo_date: string | null;
+};
+
 type CustomerInvoicesPageProps = {
   params: Promise<{ customerCode: string }>;
 };
@@ -35,6 +40,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
   let hasMore = true;
   let customerName: string | null = null;
   const invoicesByNo = new Map<string, { invoice_no: string; invoice_date: string }>();
+  const creditMemosByNo = new Map<string, { credit_memo_no: string; credit_memo_date: string }>();
 
   while (hasMore) {
     const to = from + pageSize - 1;
@@ -68,17 +74,57 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
           invoice_date: row.invoice_date,
         });
       }
+
     }
 
     hasMore = rows.length === pageSize;
     from += pageSize;
   }
 
-  if (!customerName && invoicesByNo.size === 0) {
+  from = 0;
+  hasMore = true;
+
+  while (hasMore) {
+    const to = from + pageSize - 1;
+    let creditMemoQuery = supabaseAdmin
+      .from("credit_memo_rows")
+      .select("credit_memo_no,credit_memo_date")
+      .eq("customer_code", customerCode)
+      .order("credit_memo_no", { ascending: false })
+      .range(from, to);
+
+    if (!isAdmin) {
+      creditMemoQuery = creditMemoQuery.eq("salesperson", session.user.salespersonName);
+    }
+
+    const { data: creditMemoData, error: creditMemoError } = await creditMemoQuery;
+
+    if (creditMemoError) {
+      console.error("Failed to fetch customer credit memos", creditMemoError);
+      throw new Error("Failed to fetch customer credit memos");
+    }
+
+    const creditMemoRows = (creditMemoData as CustomerCreditMemoSummaryRow[]) ?? [];
+
+    for (const row of creditMemoRows) {
+      if (row.credit_memo_no && row.credit_memo_date && !creditMemosByNo.has(row.credit_memo_no)) {
+        creditMemosByNo.set(row.credit_memo_no, {
+          credit_memo_no: row.credit_memo_no,
+          credit_memo_date: row.credit_memo_date,
+        });
+      }
+    }
+
+    hasMore = creditMemoRows.length === pageSize;
+    from += pageSize;
+  }
+
+  if (!customerName && invoicesByNo.size === 0 && creditMemosByNo.size === 0) {
     notFound();
   }
 
   const invoices = Array.from(invoicesByNo.values());
+  const creditMemos = Array.from(creditMemosByNo.values());
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-10">
@@ -96,7 +142,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
         </Link>
       </div>
 
-      <CustomerInvoicesView customerCode={customerCode} invoices={invoices} />
+      <CustomerInvoicesView customerCode={customerCode} invoices={invoices} creditMemos={creditMemos} />
 
       <NotFromRecentInvoicesNote customerCode={customerCode} />
     </main>
