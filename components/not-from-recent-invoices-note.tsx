@@ -240,9 +240,9 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
 
   return (
     <>
-      <div className="mt-5 rounded-md border border-zinc-200 p-4">
+      <div className="mt-5 rounded-md border border-zinc-200 dark:border-zinc-800 p-4">
         <h3 className="text-base font-semibold">Not from recent invoices</h3>
-        <p className="mt-1 text-sm text-zinc-600">
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
           Please add credit note if the item is not from the invoices above
         </p>
 
@@ -259,13 +259,13 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
 
       {isModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-lg bg-white p-5 shadow-xl">
+          <div className="w-full max-w-xl rounded-lg bg-white dark:bg-zinc-900 p-5 shadow-xl">
             <div className="mb-4 flex items-start justify-between gap-4">
               <h3 className="text-lg font-semibold">Add Credit Note</h3>
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-md border border-zinc-300 px-2 py-1 text-xs"
+                className="rounded-md border border-zinc-300 dark:border-zinc-700 px-2 py-1 text-xs"
               >
                 Close
               </button>
@@ -273,17 +273,17 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
 
             <div className="space-y-3 text-sm">
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Invoice No</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Invoice No</span>
                 <input
                   type="text"
                   value={invoiceNo}
                   onChange={(event) => setInvoiceNo(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Item No</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Item No</span>
                 <div className="relative">
                   <input
                     type="text"
@@ -295,19 +295,19 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                     }}
                     onFocus={() => setActiveLookupField("item_no")}
                     onBlur={closeLookupDropdownWithDelay}
-                    className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                    className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                   />
                   {activeLookupField === "item_no" && itemOptions.length > 0 ? (
-                    <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white py-1 shadow-lg">
+                    <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-1 shadow-lg">
                       {itemOptions.map((option) => (
                         <li key={`${option.item_no}-${option.item_descp}`}>
                           <button
                             type="button"
                             onClick={() => applyItemOption(option)}
-                            className="block w-full px-3 py-2 text-left hover:bg-zinc-50"
+                            className="block w-full px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
                           >
-                            <p className="font-medium text-zinc-800">{option.item_no}</p>
-                            <p className="text-xs text-zinc-600">{option.item_descp}</p>
+                            <p className="font-medium text-zinc-800 dark:text-zinc-100">{option.item_no}</p>
+                            <p className="text-xs text-zinc-600 dark:text-zinc-300">{option.item_descp}</p>
                           </button>
                         </li>
                       ))}
@@ -315,12 +315,12 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                   ) : null}
                 </div>
                 {isItemLookupLoading && activeLookupField === "item_no" ? (
-                  <p className="mt-1 text-xs text-zinc-500">Searching items…</p>
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Searching items…</p>
                 ) : null}
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Description</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Description</span>
                 <div className="relative">
                   <input
                     type="text"
@@ -332,19 +332,19 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                     }}
                     onFocus={() => setActiveLookupField("item_descp")}
                     onBlur={closeLookupDropdownWithDelay}
-                    className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                    className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                   />
                   {activeLookupField === "item_descp" && itemOptions.length > 0 ? (
-                    <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white py-1 shadow-lg">
+                    <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-1 shadow-lg">
                       {itemOptions.map((option) => (
                         <li key={`${option.item_no}-${option.item_descp}-description`}>
                           <button
                             type="button"
                             onClick={() => applyItemOption(option)}
-                            className="block w-full px-3 py-2 text-left hover:bg-zinc-50"
+                            className="block w-full px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
                           >
-                            <p className="font-medium text-zinc-800">{option.item_no}</p>
-                            <p className="text-xs text-zinc-600">{option.item_descp}</p>
+                            <p className="font-medium text-zinc-800 dark:text-zinc-100">{option.item_no}</p>
+                            <p className="text-xs text-zinc-600 dark:text-zinc-300">{option.item_descp}</p>
                           </button>
                         </li>
                       ))}
@@ -352,16 +352,16 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                   ) : null}
                 </div>
                 {isItemLookupLoading && activeLookupField === "item_descp" ? (
-                  <p className="mt-1 text-xs text-zinc-500">Searching items…</p>
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Searching items…</p>
                 ) : null}
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Type</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Type</span>
                 <select
                   value={creditType}
                   onChange={(event) => setCreditType(event.target.value as CreditType)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 >
                   <option value="case">case</option>
                   <option value="piece">piece</option>
@@ -369,35 +369,35 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Quantity</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Quantity</span>
                 <input
                   type="number"
                   min="0"
                   step="1"
                   value={quantity}
                   onChange={(event) => setQuantity(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Amount</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Amount</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={amount}
                   onChange={(event) => setAmount(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Reason*</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Reason*</span>
                 <textarea
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                   rows={3}
                 />
               </label>
@@ -419,7 +419,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
                 type="button"
                 onClick={onPickPicture}
                 disabled={isUploadingPicture || isSubmitting}
-                className="rounded-md border border-zinc-300 px-4 py-2 text-sm text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isUploadingPicture ? "Uploading..." : "Add Picture"}
               </button>

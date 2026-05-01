@@ -44,7 +44,7 @@ export function LoginForm() {
           name="username"
           type="text"
           required
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm"
           autoComplete="username"
         />
       </div>
@@ -58,7 +58,7 @@ export function LoginForm() {
           name="password"
           type="password"
           required
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm"
           autoComplete="current-password"
         />
       </div>

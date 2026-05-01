@@ -426,19 +426,19 @@ export function GlobalCartWidget() {
           setIsOpen(true);
           void loadPhotos();
         }}
-        className="fixed right-4 top-4 z-40 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+        className="fixed right-4 top-4 z-40 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-zinc-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm transition hover:border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 dark:bg-slate-900/40"
       >
         Cart ({cartItemCount})
       </button>
 
       {isOpen ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 md:p-8">
-          <div className="mx-auto max-h-[calc(100vh-1.5rem)] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="border-b border-slate-200 px-6 py-5 md:px-8">
+          <div className="mx-auto max-h-[calc(100vh-1.5rem)] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-zinc-900 shadow-2xl">
+            <div className="border-b border-slate-200 dark:border-slate-700 px-6 py-5 md:px-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="text-2xl font-semibold text-slate-900">Credit Request Cart</h3>
-                  <p className="mt-1 text-sm text-slate-500">Review details carefully before submitting.</p>
+                  <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Credit Request Cart</h3>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Review details carefully before submitting.</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -460,7 +460,7 @@ export function GlobalCartWidget() {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+                    className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-800/60 dark:bg-slate-900/40"
                   >
                     Close
                   </button>
@@ -471,13 +471,13 @@ export function GlobalCartWidget() {
 
             <div className="space-y-6 px-6 py-6 md:px-8">
               {displayRows.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
+                <p className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-4 py-5 text-sm text-slate-500 dark:text-slate-400">
                   No items in cart yet.
                 </p>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-slate-100 text-slate-700">
+                    <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                       <tr>
                         <th className="px-3 py-3 text-left font-semibold">Customer Code</th>
                         <th className="px-3 py-3 text-left font-semibold">Invoice No</th>
@@ -494,7 +494,7 @@ export function GlobalCartWidget() {
                     </thead>
                     <tbody>
                       {displayRows.map((item) => (
-                        <tr key={item.id} className="border-t border-slate-200 text-slate-700">
+                        <tr key={item.id} className="border-t border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">
                           <td className="px-3 py-3">{item.customer_code}</td>
                           <td className="px-3 py-3">{item.invoice_no}</td>
                           <td className="px-3 py-3">{item.item_no}</td>
@@ -509,7 +509,7 @@ export function GlobalCartWidget() {
                             <button
                               type="button"
                               onClick={() => void removeItem(item.id)}
-                              className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              className="rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 dark:bg-slate-900/40"
                             >
                               Remove
                             </button>
@@ -521,10 +521,10 @@ export function GlobalCartWidget() {
                 </div>
               )}
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">Photo Evidence</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Photo Evidence</p>
                   </div>
                   <input
                     ref={fileInputRef}
@@ -540,21 +540,21 @@ export function GlobalCartWidget() {
                     type="button"
                     onClick={onPickPictures}
                     disabled={isUploadingPictures}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                    className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:bg-slate-800"
                   >
                     {isUploadingPictures ? "Uploading..." : "Add Photos"}
                   </button>
                 </div>
 
-                <div className="mt-4 min-h-14 rounded-lg border border-dashed border-slate-300 bg-white p-3">
+                <div className="mt-4 min-h-14 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-zinc-900 p-3">
                   {isUploadingPictures ? (
-                    <p className="text-xs text-slate-500">Uploading photo evidence...</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Uploading photo evidence...</p>
                   ) : pictures.length > 0 ? (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                       {pictures.map((picture) => (
                         <div
                           key={picture.id}
-                          className="group relative overflow-hidden rounded-md border border-slate-300 bg-slate-100 shadow-sm"
+                          className="group relative overflow-hidden rounded-md border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shadow-sm"
                         >
                           <button
                             type="button"
@@ -582,14 +582,14 @@ export function GlobalCartWidget() {
                               className="h-full w-full object-cover transition duration-150 group-hover:scale-[1.02]"
                             />
                           </button>
-                          <p className="truncate border-t border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-600">
+                          <p className="truncate border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-zinc-900 px-2 py-1 text-[10px] text-slate-600">
                             {picture.fileName}
                           </p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       No photos uploaded yet. Click <strong>Add Photos</strong> to attach evidence.
                     </p>
                   )}
@@ -601,13 +601,13 @@ export function GlobalCartWidget() {
                 ) : null}
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-800">Notes:</p>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Notes:</p>
                 <textarea
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                   rows={4}
-                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-0 transition focus:border-slate-400"
+                  className="mt-2 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 outline-none ring-0 transition focus:border-slate-400"
                 />
               </div>
 

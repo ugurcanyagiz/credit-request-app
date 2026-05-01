@@ -91,7 +91,7 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
       <h2 className="text-lg font-semibold">Invoices</h2>
 
       <div className="space-y-1">
-        <label htmlFor="customer-invoice-search" className="block text-sm font-medium text-zinc-700">
+        <label htmlFor="customer-invoice-search" className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
           Search by Item No or Item Description
         </label>
         <input
@@ -104,7 +104,7 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
             void runSearch(nextValue);
           }}
           placeholder="Minimum 2 characters"
-          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+          className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
         />
       </div>
 
@@ -112,24 +112,24 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
 
       {isSearchActive ? (
         <div className="space-y-2">
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">
             {isSearching ? "Searching items..." : `${searchResults.length} matching item(s) found.`}
           </p>
 
           {!isSearching && searchResults.length > 0 ? (
             <ul className="space-y-2">
               {searchResults.map((item, index) => (
-                <li key={`${item.invoice_no}-${item.item_no}-${index}`} className="rounded-md border border-zinc-200 text-sm">
+                <li key={`${item.invoice_no}-${item.item_no}-${index}`} className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm">
                   <button
                     type="button"
                     onClick={() => setSelectedResult(item)}
-                    className="block w-full px-3 py-3 text-left transition-colors hover:bg-zinc-50"
+                    className="block w-full px-3 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
                   >
-                    <p className="text-zinc-600">Invoice No: {item.invoice_no}</p>
-                    <p className="mb-2 text-zinc-600">Invoice Date: {item.invoice_date}</p>
-                    <p className="mb-2 text-zinc-600">Lot Number: {item.sales_lot_no}</p>
+                    <p className="text-zinc-600 dark:text-zinc-300">Invoice No: {item.invoice_no}</p>
+                    <p className="mb-2 text-zinc-600 dark:text-zinc-300">Invoice Date: {item.invoice_date}</p>
+                    <p className="mb-2 text-zinc-600 dark:text-zinc-300">Lot Number: {item.sales_lot_no}</p>
                     <p className="font-medium text-blue-700">{item.item_no}</p>
-                    <p className="text-zinc-700">{item.item_descp}</p>
+                    <p className="text-zinc-700 dark:text-zinc-200">{item.item_descp}</p>
                   </button>
                 </li>
               ))}
@@ -137,20 +137,20 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
           ) : null}
 
           {!isSearching && searchResults.length === 0 ? (
-            <p className="text-sm text-zinc-600">No matching items found.</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-300">No matching items found.</p>
           ) : null}
         </div>
       ) : (
         <>
           <ul className="space-y-2">
           {invoices.map((invoice) => (
-            <li key={invoice.invoice_no} className="rounded-md border border-zinc-200 text-sm">
+            <li key={invoice.invoice_no} className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm">
               <Link
                 href={`/dashboard/customers/${encodeURIComponent(customerCode)}/invoices/${encodeURIComponent(invoice.invoice_no)}`}
-                className="block px-3 py-2 transition-colors hover:bg-zinc-50"
+                className="block px-3 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
               >
                 <p className="font-medium">Invoice No: {invoice.invoice_no}</p>
-                <p className="text-zinc-600">Invoice Date: {invoice.invoice_date}</p>
+                <p className="text-zinc-600 dark:text-zinc-300">Invoice Date: {invoice.invoice_date}</p>
               </Link>
             </li>
           ))}
