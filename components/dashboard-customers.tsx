@@ -75,7 +75,10 @@ export function DashboardCustomers() {
   return (
     <section className="mt-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Customers</h2>
+        <div>
+          <h2 className="text-lg font-semibold">Customers</h2>
+          <p className="text-xs text-zinc-500">Browse invoices and credit memos by customer.</p>
+        </div>
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/" })}
