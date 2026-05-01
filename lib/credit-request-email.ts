@@ -11,7 +11,6 @@ export type CreditRequestCartItem = {
   piece_price: number;
   sales_batch_number: string | null;
   sales_lot_no: string | null;
-  batch_expiration_date?: string | null;
   credit_type: CreditType;
   credit_amount: number;
   created_at: string;
@@ -86,7 +85,7 @@ function formatSelectedItemBlock({
     `Item: ${compactText(item.item_no || "-", 24)}`,
     `Desc: ${compactText(description, 52)}`,
     `Qty: ${String(item.quantity ?? 0)} Amount: ${money(Number(item.credit_amount ?? 0))}`,
-    `Reason: ${compactText(reason || "-", 24)} Batch: ${compactText(item.sales_batch_number || "-", 16)} Lot: ${compactText(item.sales_lot_no || "-", 16)} Batch Exp. Date: ${compactText(item.batch_expiration_date || "-", 16)} Type: ${compactText(item.credit_type || "-", 8)}`,
+    `Reason: ${compactText(reason || "-", 32)} Batch: ${compactText(item.sales_batch_number || "-", 20)} Lot: ${compactText(item.sales_lot_no || "-", 20)} Type: ${compactText(item.credit_type || "-", 8)}`,
   ];
 }
 
