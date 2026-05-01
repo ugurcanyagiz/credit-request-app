@@ -140,15 +140,15 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
     <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm text-zinc-600">Customer</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">Customer</p>
           <h1 className="text-2xl font-semibold">{customerName ?? customerCode}</h1>
-          <p className="text-sm text-zinc-600">Code: {customerCode}</p>
-          <p className="text-sm text-zinc-600">Invoice No: {invoiceNo}</p>
-          <p className="text-sm text-zinc-600">Invoice Date: {invoiceDate ?? "-"}</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">Code: {customerCode}</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">Invoice No: {invoiceNo}</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">Invoice Date: {invoiceDate ?? "-"}</p>
         </div>
         <Link
           href={`/dashboard/customers/${encodeURIComponent(customerCode)}`}
-          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50"
+          className="rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
         >
           Back
         </Link>

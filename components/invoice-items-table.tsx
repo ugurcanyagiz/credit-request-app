@@ -30,7 +30,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
   return (
     <>
       <div className="mb-3 space-y-1">
-        <label htmlFor="invoice-item-search" className="block text-sm font-medium text-zinc-700">
+        <label htmlFor="invoice-item-search" className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
           Search Items
         </label>
         <input
@@ -39,13 +39,13 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Filter by Item No or Item Description"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+          className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm focus:border-zinc-500 dark:focus:border-zinc-500 focus:outline-none"
         />
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-zinc-200">
+      <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-800">
         <table className="min-w-full text-sm">
-          <thead className="bg-zinc-50 text-left">
+          <thead className="bg-zinc-50 dark:bg-zinc-900/40 text-left">
             <tr>
               <th className="px-3 py-2 font-medium">Item No</th>
               <th className="px-3 py-2 font-medium">Item Description</th>
@@ -56,7 +56,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
           <tbody>
             {filteredItems.length > 0 ? (
               filteredItems.map((item, index) => (
-                <tr key={`${item.item_no}-${index}`} className="border-t border-zinc-200">
+                <tr key={`${item.item_no}-${index}`} className="border-t border-zinc-200 dark:border-zinc-800">
                   <td className="px-3 py-2">
                     <button
                       type="button"
@@ -72,8 +72,8 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
                 </tr>
               ))
             ) : (
-              <tr className="border-t border-zinc-200">
-                <td colSpan={4} className="px-3 py-4 text-center text-zinc-500">
+              <tr className="border-t border-zinc-200 dark:border-zinc-800">
+                <td colSpan={4} className="px-3 py-4 text-center text-zinc-500 dark:text-zinc-400">
                   No items match your search.
                 </td>
               </tr>

@@ -235,13 +235,13 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-3 sm:flex sm:items-center sm:justify-center sm:p-4">
-      <div className="mx-auto my-4 max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-5 shadow-xl sm:my-0 sm:max-h-[90vh]">
+      <div className="mx-auto my-4 max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white dark:bg-zinc-900 p-5 shadow-xl sm:my-0 sm:max-h-[90vh]">
         <div className="mb-4 flex items-start justify-between gap-4">
           <h3 className="text-lg font-semibold">Product Detail & Credit Request</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-zinc-300 px-2 py-1 text-xs"
+            className="rounded-md border border-zinc-300 dark:border-zinc-700 px-2 py-1 text-xs"
           >
             Close
           </button>
@@ -258,22 +258,22 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
           <p><span className="font-medium">Case Price:</span> {item.piece_price}</p>
         </div>
 
-        <div className="mt-5 rounded-md border border-zinc-200 p-4">
+        <div className="mt-5 rounded-md border border-zinc-200 dark:border-zinc-800 p-4">
           <h4 className="mb-3 font-semibold">Reason</h4>
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsReasonDropdownOpen((previous) => !previous)}
-              className="flex w-full items-center justify-between rounded-md border border-zinc-300 px-3 py-2 text-left text-sm"
+              className="flex w-full items-center justify-between rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-left text-sm"
             >
               <span className="truncate">
                 {selectedReason ?? "Select reason"}
               </span>
-              <span className="ml-3 text-xs text-zinc-500">{isReasonDropdownOpen ? "▲" : "▼"}</span>
+              <span className="ml-3 text-xs text-zinc-500 dark:text-zinc-400">{isReasonDropdownOpen ? "▲" : "▼"}</span>
             </button>
 
             {isReasonDropdownOpen ? (
-              <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white p-2 shadow-lg">
+              <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-2 shadow-lg">
                 <div className="grid gap-2 text-sm">
                   {REASON_OPTIONS.map((option) => {
                     const checked = selectedReason === option;
@@ -304,18 +304,18 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
 
           {selectedReason === "Other" ? (
             <label className="mt-3 block text-sm">
-              <span className="mb-1 block text-zinc-700">Other reason</span>
+              <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Other reason</span>
               <input
                 type="text"
                 value={otherReason}
                 onChange={(event) => setOtherReason(event.target.value)}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
               />
             </label>
           ) : null}
         </div>
 
-        <div className="mt-5 rounded-md border border-zinc-200 p-4">
+        <div className="mt-5 rounded-md border border-zinc-200 dark:border-zinc-800 p-4">
           <h4 className="mb-3 font-semibold">Credit Request Amount</h4>
 
           <div className="mb-4 flex gap-4 text-sm">
@@ -342,7 +342,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
           {creditType === "case" ? (
             <div className="space-y-2 text-sm">
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Case Quantity</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Case Quantity</span>
                 <input
                   type="number"
                   min="0"
@@ -364,39 +364,39 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
 
                     setCaseCount(nextValue);
                   }}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
-              <p className="text-xs text-zinc-500">Maximum allowed: {item.quantity}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Maximum allowed: {item.quantity}</p>
             </div>
           ) : (
             <div className="space-y-2 text-sm">
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Pieces Per Case</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Pieces Per Case</span>
                 <input
                   type="number"
                   min="1"
                   step="1"
                   value={piecesPerCase}
                   onChange={(event) => setPiecesPerCase(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-zinc-700">Requested Piece Quantity</span>
+                <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Requested Piece Quantity</span>
                 <input
                   type="number"
                   min="1"
                   step="1"
                   value={requestedPieces}
                   onChange={(event) => setRequestedPieces(event.target.value)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2"
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
             </div>
           )}
 
-          <div className="mt-4 rounded-md bg-zinc-50 p-3 text-sm">
+          <div className="mt-4 rounded-md bg-zinc-50 dark:bg-zinc-900/40 p-3 text-sm">
             <p className="font-medium">Calculated Credit Request Amount</p>
             <p className="mt-1 text-lg font-semibold">
               {autoCreditAmount !== null && Number.isFinite(autoCreditAmount)
@@ -421,7 +421,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
               type="button"
               onClick={onPickPicture}
               disabled={isUploadingPicture || isSubmitting}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isUploadingPicture ? "Uploading..." : "Add Picture"}
             </button>
