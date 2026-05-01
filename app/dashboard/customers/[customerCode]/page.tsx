@@ -21,6 +21,11 @@ type CreditMemoSummaryRow = {
   credit_memo_date: string | null;
 };
 
+type CreditMemoSummaryRow = {
+  credit_memo_no: string | null;
+  credit_memo_date: string | null;
+};
+
 type CustomerInvoicesPageProps = {
   params: Promise<{ customerCode: string }>;
 };

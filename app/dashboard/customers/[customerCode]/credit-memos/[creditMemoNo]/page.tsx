@@ -14,9 +14,6 @@ type CreditMemoItemRow = {
   item_descp: string | null;
   quantity: number | string | null;
   sales_amount: number | string | null;
-  sales_batch_number: string | null;
-  sales_lot_no: string | null;
-  batch_expiration_date: string | null;
   piece_price: number | string | null;
 };
 
@@ -49,7 +46,7 @@ export default async function CreditMemoItemsPage({ params }: CreditMemoItemsPag
   let query = supabaseAdmin
     .from("credit_memo_rows")
     .select(
-      "customer_name,credit_memo_date,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price",
+      "customer_name,credit_memo_date,item_no,item_descp,quantity,sales_amount,piece_price",
     )
     .eq("customer_code", customerCode)
     .eq("credit_memo_no", creditMemoNo)
@@ -93,9 +90,6 @@ export default async function CreditMemoItemsPage({ params }: CreditMemoItemsPag
       row.item_descp &&
       quantity !== null &&
       salesAmount !== null &&
-      row.sales_batch_number &&
-      row.sales_lot_no &&
-      row.batch_expiration_date &&
       piecePrice !== null
     ) {
       items.push({
@@ -103,9 +97,9 @@ export default async function CreditMemoItemsPage({ params }: CreditMemoItemsPag
         item_descp: row.item_descp,
         quantity,
         sales_amount: salesAmount,
-        sales_batch_number: row.sales_batch_number,
-        sales_lot_no: row.sales_lot_no,
-        batch_expiration_date: row.batch_expiration_date,
+        sales_batch_number: "-",
+        sales_lot_no: "-",
+        batch_expiration_date: "-",
         piece_price: piecePrice,
       });
     }
