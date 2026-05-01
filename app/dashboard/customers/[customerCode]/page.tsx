@@ -21,6 +21,11 @@ type CreditMemoSummaryRow = {
   credit_memo_date: string | null;
 };
 
+type CustomerCreditMemoSummaryRow = {
+  credit_memo_no: string | null;
+  credit_memo_date: string | null;
+};
+
 type CustomerInvoicesPageProps = {
   params: Promise<{ customerCode: string }>;
 };
@@ -106,7 +111,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
       throw new Error("Failed to fetch customer credit memos");
     }
 
-    const creditMemoRows = (creditMemoData as CreditMemoSummaryRow[]) ?? [];
+    const creditMemoRows = (creditMemoData as CustomerCreditMemoSummaryRow[]) ?? [];
 
     for (const row of creditMemoRows) {
       if (row.credit_memo_no && row.credit_memo_date && !creditMemosByNo.has(row.credit_memo_no)) {
