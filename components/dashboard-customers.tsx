@@ -75,7 +75,10 @@ export function DashboardCustomers() {
   return (
     <section className="mt-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Customers</h2>
+        <div>
+          <h2 className="text-lg font-semibold">Customers</h2>
+          <p className="text-xs text-zinc-500">Browse invoices by customer or open Credit Memo Explorer.</p>
+        </div>
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/" })}
@@ -84,6 +87,13 @@ export function DashboardCustomers() {
           Sign out
         </button>
       </div>
+
+      <Link
+        href="/dashboard/credit-memos"
+        className="inline-flex w-fit rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-800 transition hover:bg-zinc-100"
+      >
+        Open Credit Memos
+      </Link>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
