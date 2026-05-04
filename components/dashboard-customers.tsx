@@ -17,16 +17,24 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
   const [customers] = useState<Customer[]>(initialCustomers);
   const [searchTerm, setSearchTerm] = useState("");
 
+  function normalizeSearchValue(value: string) {
+    return value
+      .trim()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("en-US");
+  }
+
   const filteredCustomers = useMemo(() => {
-    const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+    const normalizedSearchTerm = normalizeSearchValue(searchTerm);
 
     if (!normalizedSearchTerm) {
       return customers;
     }
 
     return customers.filter((customer) => {
-      const customerCode = customer.customer_code.toLocaleLowerCase();
-      const customerName = customer.customer_name.toLocaleLowerCase();
+      const customerCode = normalizeSearchValue(customer.customer_code);
+      const customerName = normalizeSearchValue(customer.customer_name);
 
       return (
         customerCode.includes(normalizedSearchTerm) ||
