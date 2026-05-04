@@ -492,7 +492,7 @@ export function GlobalCartWidget() {
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                       <tr>
-                        <th className="px-3 py-3 text-left font-semibold">Need Pick-up?</th>
+                        <th className="px-3 py-3 text-left font-semibold">Need Pick-up</th>
                         <th className="px-3 py-3 text-left font-semibold">Customer Code</th>
                         <th className="px-3 py-3 text-left font-semibold">Invoice No</th>
                         <th className="px-3 py-3 text-left font-semibold">Item No</th>
