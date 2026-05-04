@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
 
 type Customer = {
@@ -9,50 +9,13 @@ type Customer = {
   customer_name: string;
 };
 
-export function DashboardCustomers() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [error, setError] = useState<string | null>(null);
+type DashboardCustomersProps = {
+  initialCustomers: Customer[];
+};
+
+export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps) {
+  const [customers] = useState<Customer[]>(initialCustomers);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadCustomers() {
-      try {
-        const response = await fetch("/api/customers", {
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          if (isMounted) {
-            setError("Failed to load customers.");
-          }
-          return;
-        }
-
-        const payload = (await response.json()) as { customers?: Customer[] };
-
-        if (isMounted) {
-          setCustomers(payload.customers ?? []);
-        }
-      } catch {
-        if (isMounted) {
-          setError("Failed to load customers.");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadCustomers();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const filteredCustomers = useMemo(() => {
     const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
@@ -88,9 +51,6 @@ export function DashboardCustomers() {
         </button>
       </div>
 
-
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
       <div>
         <label
           htmlFor="customer-search"
@@ -104,45 +64,29 @@ export function DashboardCustomers() {
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search by customer code or name..."
-          disabled={isLoading}
-          aria-busy={isLoading}
+          aria-busy={false}
           className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
         />
       </div>
 
-      {isLoading ? (
-        <div aria-live="polite" className="space-y-2">
-          <p className="text-xs tracking-wide text-zinc-500 dark:text-zinc-400">Loading customers…</p>
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div
-              key={`customer-loading-${index}`}
-              className="rounded-md border border-zinc-200 dark:border-zinc-800 px-3 py-2"
+      <ul className="space-y-2">
+        {filteredCustomers.map((customer) => (
+          <li
+            key={customer.customer_code}
+            className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm"
+          >
+            <Link
+              href={`/dashboard/customers/${encodeURIComponent(customer.customer_code)}`}
+              className="block px-3 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
             >
-              <div className="h-4 w-24 animate-pulse rounded bg-zinc-200" />
-              <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-zinc-100" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {filteredCustomers.map((customer) => (
-            <li
-              key={customer.customer_code}
-              className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm"
-            >
-              <Link
-                href={`/dashboard/customers/${encodeURIComponent(customer.customer_code)}`}
-                className="block px-3 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
-              >
-                <p className="font-medium">{customer.customer_code}</p>
-                <p className="text-zinc-600 dark:text-zinc-300">{customer.customer_name}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+              <p className="font-medium">{customer.customer_code}</p>
+              <p className="text-zinc-600 dark:text-zinc-300">{customer.customer_name}</p>
+            </Link>
+          </li>
+        ))}
+      </ul>
 
-      {!isLoading && !error && filteredCustomers.length === 0 ? (
+      {filteredCustomers.length === 0 ? (
         <p className="text-sm text-zinc-600 dark:text-zinc-300">
           No customers found for this search.
         </p>
