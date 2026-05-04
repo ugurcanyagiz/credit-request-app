@@ -68,7 +68,8 @@ function isValidCartItem(value: unknown): value is CreditRequestCartItem {
     (item.sales_lot_no === null || typeof item.sales_lot_no === "string") &&
     (item.credit_type === "case" || item.credit_type === "piece") &&
     typeof item.credit_amount === "number" &&
-    typeof item.created_at === "string"
+    typeof item.created_at === "string" &&
+    (typeof item.need_pickup === "undefined" || typeof item.need_pickup === "boolean")
   );
 }
 

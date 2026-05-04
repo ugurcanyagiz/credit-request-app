@@ -14,6 +14,7 @@ export type CreditRequestCartItem = {
   credit_type: CreditType;
   credit_amount: number;
   created_at: string;
+  need_pickup?: boolean;
 };
 
 export type UploadedPhotoReference = {
@@ -81,11 +82,12 @@ function formatSelectedItemBlock({
   description: string;
   reason: string;
 }) {
+  const pickupLabel = item.need_pickup ? "Yes" : "No";
   return [
     `Item: ${compactText(item.item_no || "-", 24)}`,
     `Desc: ${compactText(description, 52)}`,
     `Qty: ${String(item.quantity ?? 0)} Amount: ${money(Number(item.credit_amount ?? 0))}`,
-    `Reason: ${compactText(reason || "-", 32)} Batch: ${compactText(item.sales_batch_number || "-", 20)} Lot: ${compactText(item.sales_lot_no || "-", 20)} Type: ${compactText(item.credit_type || "-", 8)}`,
+    `Reason: ${compactText(reason || "-", 32)} Batch: ${compactText(item.sales_batch_number || "-", 20)} Lot: ${compactText(item.sales_lot_no || "-", 20)} Type: ${compactText(item.credit_type || "-", 8)} Pickup: ${pickupLabel}`,
   ];
 }
 
