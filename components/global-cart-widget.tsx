@@ -80,6 +80,7 @@ export function GlobalCartWidget() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [removeAllError, setRemoveAllError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
+  const [pickupSelectionsById, setPickupSelectionsById] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cartRows = useMemo(() => {
@@ -146,7 +147,15 @@ export function GlobalCartWidget() {
     }
 
     const payload = (await response.json()) as { items?: CartItem[] };
-    setItems(payload.items ?? []);
+    const nextItems = payload.items ?? [];
+    setItems(nextItems);
+    setPickupSelectionsById((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const item of nextItems) {
+        next[item.id] = prev[item.id] ?? false;
+      }
+      return next;
+    });
     setAuthorized(true);
   }, []);
 
@@ -338,7 +347,11 @@ export function GlobalCartWidget() {
       const subject = `Credit request: ${customerCode}-${todayMMDDYY}`;
 
       const formData = new FormData();
-      formData.set("cartRows", JSON.stringify(cartRows));
+      const cartRowsWithPickup = cartRows.map((item) => ({
+        ...item,
+        need_pickup: Boolean(pickupSelectionsById[item.id]),
+      }));
+      formData.set("cartRows", JSON.stringify(cartRowsWithPickup));
       formData.set("subject", subject);
       formData.set("notes", notes.trim());
 
@@ -479,6 +492,7 @@ export function GlobalCartWidget() {
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                       <tr>
+                        <th className="px-3 py-3 text-left font-semibold">Need Pick-up?</th>
                         <th className="px-3 py-3 text-left font-semibold">Customer Code</th>
                         <th className="px-3 py-3 text-left font-semibold">Invoice No</th>
                         <th className="px-3 py-3 text-left font-semibold">Item No</th>
@@ -495,6 +509,17 @@ export function GlobalCartWidget() {
                     <tbody>
                       {displayRows.map((item) => (
                         <tr key={item.id} className="border-t border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">
+                          <td className="px-3 py-3">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(pickupSelectionsById[item.id])}
+                              onChange={(event) => {
+                                const isChecked = event.target.checked;
+                                setPickupSelectionsById((prev) => ({ ...prev, [item.id]: isChecked }));
+                              }}
+                              className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
+                            />
+                          </td>
                           <td className="px-3 py-3">{item.customer_code}</td>
                           <td className="px-3 py-3">{item.invoice_no}</td>
                           <td className="px-3 py-3">{item.item_no}</td>
