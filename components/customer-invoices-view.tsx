@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { ProductCreditRequestModal, type InvoiceItem } from "@/components/product-credit-request-modal";
+import { NotFromRecentInvoicesNote } from "@/components/not-from-recent-invoices-note";
 
 type InvoiceSummary = {
   invoice_no: string;
@@ -195,6 +196,8 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
           onClose={() => setSelectedResult(null)}
         />
       ) : null}
+
+      {activeTab === "invoices" ? <NotFromRecentInvoicesNote customerCode={customerCode} /> : null}
     </section>
   );
 }

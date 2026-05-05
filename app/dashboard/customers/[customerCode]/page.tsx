@@ -5,7 +5,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { NotFromRecentInvoicesNote } from "@/components/not-from-recent-invoices-note";
 import { CustomerInvoicesView } from "@/components/customer-invoices-view";
 
 type CreditRowInvoice = {
@@ -98,9 +97,6 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
       </div>
 
       <CustomerInvoicesView customerCode={customerCode} invoices={invoices} />
-
-
-      <NotFromRecentInvoicesNote customerCode={customerCode} />
     </main>
   );
 }
