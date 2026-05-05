@@ -21,6 +21,7 @@ type CustomerInvoicesViewProps = {
 };
 
 export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoicesViewProps) {
+  const [activeTab, setActiveTab] = useState<"invoices" | "credits">("invoices");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -85,32 +86,59 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
   }
 
   const isSearchActive = searchTerm.trim().length >= 2;
+  const invoiceRows = invoices.filter((invoice) => !invoice.invoice_no.startsWith("CM-"));
+  const creditRows = invoices.filter((invoice) => invoice.invoice_no.startsWith("CM-"));
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold">Invoices</h2>
-
-      <div className="space-y-1">
-        <label htmlFor="customer-invoice-search" className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-          Search by Item No or Item Description
-        </label>
-        <input
-          id="customer-invoice-search"
-          type="search"
-          value={searchTerm}
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setSearchTerm(nextValue);
-            void runSearch(nextValue);
-          }}
-          placeholder="Minimum 2 characters"
-          className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
-        />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab("invoices")}
+          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+            activeTab === "invoices"
+              ? "border-zinc-800 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+              : "border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/60"
+          }`}
+        >
+          Invoices
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("credits")}
+          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+            activeTab === "credits"
+              ? "border-zinc-800 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+              : "border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/60"
+          }`}
+        >
+          Credits
+        </button>
       </div>
+
+      {activeTab === "invoices" ? (
+        <div className="space-y-1">
+          <label htmlFor="customer-invoice-search" className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
+            Search by Item No or Item Description
+          </label>
+          <input
+            id="customer-invoice-search"
+            type="search"
+            value={searchTerm}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              setSearchTerm(nextValue);
+              void runSearch(nextValue);
+            }}
+            placeholder="Minimum 2 characters"
+            className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
+          />
+        </div>
+      ) : null}
 
       {searchError ? <p className="text-sm text-red-600">{searchError}</p> : null}
 
-      {isSearchActive ? (
+      {activeTab === "invoices" && isSearchActive ? (
         <div className="space-y-2">
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
             {isSearching ? "Searching items..." : `${searchResults.length} matching item(s) found.`}
@@ -143,14 +171,14 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
       ) : (
         <>
           <ul className="space-y-2">
-          {invoices.map((invoice) => (
+          {(activeTab === "invoices" ? invoiceRows : creditRows).map((invoice) => (
             <li key={invoice.invoice_no} className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm">
               <Link
                 href={`/dashboard/customers/${encodeURIComponent(customerCode)}/invoices/${encodeURIComponent(invoice.invoice_no)}`}
                 className="block px-3 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
               >
-                <p className="font-medium">Invoice No: {invoice.invoice_no}</p>
-                <p className="text-zinc-600 dark:text-zinc-300">Invoice Date: {invoice.invoice_date}</p>
+                <p className="font-medium">{activeTab === "invoices" ? "Invoice No" : "Credit No"}: {invoice.invoice_no}</p>
+                <p className="text-zinc-600 dark:text-zinc-300">{activeTab === "invoices" ? "Invoice Date" : "Credit Date"}: {invoice.invoice_date}</p>
               </Link>
             </li>
           ))}
