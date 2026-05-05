@@ -29,11 +29,26 @@ function tokenizeSearchValue(value: string) {
 
 export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps) {
   const [customers] = useState<Customer[]>(initialCustomers);
+
+  const uniqueCustomers = useMemo(() => {
+    const seen = new Set<string>();
+
+    return customers.filter((customer) => {
+      const dedupeKey = `${customer.customer_code}::${customer.customer_name}`;
+
+      if (seen.has(dedupeKey)) {
+        return false;
+      }
+
+      seen.add(dedupeKey);
+      return true;
+    });
+  }, [customers]);
   const [searchTerm, setSearchTerm] = useState("");
 
   const searchableCustomers = useMemo(
     () =>
-      customers.map((customer) => {
+      uniqueCustomers.map((customer) => {
         const customerCode = typeof customer.customer_code === "string" ? customer.customer_code : "";
         const customerName = typeof customer.customer_name === "string" ? customer.customer_name : "";
 
@@ -42,7 +57,7 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
           searchableValue: normalizeSearchValue(`${customerCode} ${customerName}`),
         };
       }),
-    [customers],
+    [uniqueCustomers],
   );
 
   const filteredCustomers = useMemo(() => {
@@ -50,7 +65,7 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
     const searchTokens = tokenizeSearchValue(searchTerm);
 
     if (!normalizedSearchTerm) {
-      return customers;
+      return uniqueCustomers;
     }
 
     return searchableCustomers
@@ -66,7 +81,7 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
         return searchTokens.every((token) => searchableValue.includes(token));
       })
       .map(({ customer }) => customer);
-  }, [customers, searchTerm, searchableCustomers]);
+  }, [searchTerm, searchableCustomers, uniqueCustomers]);
 
   const isSearchActive = searchTerm.trim().length > 0;
 
@@ -122,9 +137,9 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
       ) : null}
 
       <ul className="space-y-2">
-        {filteredCustomers.map((customer) => (
+        {filteredCustomers.map((customer, index) => (
           <li
-            key={customer.customer_code}
+            key={`${customer.customer_code}-${customer.customer_name}-${index}`}
             className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm"
           >
             <Link
