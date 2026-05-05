@@ -404,22 +404,24 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
               <label className="block">
                 <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Pieces Per Case</span>
                 <input
-                  type="number"
-                  min="1"
-                  step="1"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={piecesPerCase}
-                  onChange={(event) => setPiecesPerCase(event.target.value)}
+                  onChange={(event) => setPiecesPerCase(event.target.value.replace(/\D/g, ""))}
+                  placeholder="How many piece are in one case"
                   className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
               <label className="block">
                 <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Requested Piece Quantity</span>
                 <input
-                  type="number"
-                  min="1"
-                  step="1"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={requestedPieces}
-                  onChange={(event) => setRequestedPieces(event.target.value)}
+                  onChange={(event) => setRequestedPieces(event.target.value.replace(/\D/g, ""))}
+                  placeholder="How any pieces are requested for credit"
                   className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
