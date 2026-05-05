@@ -23,7 +23,7 @@ export default async function Home() {
             src={creditAppLogo}
             alt="Credit App"
             priority
-            className="mb-2 h-24 w-auto"
+            className="mb-2 h-28 w-auto"
           />
         </div>
         <LoginForm />
