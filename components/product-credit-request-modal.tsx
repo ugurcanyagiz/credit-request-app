@@ -409,7 +409,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
                   pattern="[0-9]*"
                   value={piecesPerCase}
                   onChange={(event) => setPiecesPerCase(event.target.value.replace(/\D/g, ""))}
-                  placeholder="How many pieces are in one case?"
+                  placeholder="How many piece are in one case"
                   className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
                 {piecesPerCase.trim().length === 0 ? (
@@ -426,7 +426,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
                   pattern="[0-9]*"
                   value={requestedPieces}
                   onChange={(event) => setRequestedPieces(event.target.value.replace(/\D/g, ""))}
-                  placeholder="How many pieces are requested for credit?"
+                  placeholder="How any pieces are requested for credit"
                   className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
                 {requestedPieces.trim().length === 0 ? (
