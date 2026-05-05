@@ -409,6 +409,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
                   step="1"
                   value={piecesPerCase}
                   onChange={(event) => setPiecesPerCase(event.target.value)}
+                  placeholder="How many pieces are in one case?"
                   className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
@@ -420,6 +421,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
                   step="1"
                   value={requestedPieces}
                   onChange={(event) => setRequestedPieces(event.target.value)}
+                  placeholder="How many pieces are requested for credit?"
                   className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
               </label>
