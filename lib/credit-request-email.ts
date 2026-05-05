@@ -23,6 +23,7 @@ export type UploadedPhotoReference = {
 };
 
 const CREDIT_REQUEST_RECIPIENT = "credit@turkanafood.com";
+const CREDIT_REQUEST_CC_RECIPIENT = "yerdogan@turkanafood.com";
 
 function money(value: number) {
   return Number.isFinite(value) ? value.toFixed(2) : "0.00";
@@ -182,11 +183,11 @@ export function buildCreditRequestDraftText({
 
 export function buildCreditRequestMailtoUrl({ subject, text }: { subject: string; text: string }) {
   const buildUrl = (body: string) =>
-    `mailto:${CREDIT_REQUEST_RECIPIENT}?subject=${encodeMailtoValue(subject)}&body=${encodeMailtoValue(body)}`;
+    `mailto:${CREDIT_REQUEST_RECIPIENT}?cc=${encodeMailtoValue(CREDIT_REQUEST_CC_RECIPIENT)}&subject=${encodeMailtoValue(subject)}&body=${encodeMailtoValue(body)}`;
   return {
     url: buildUrl(text),
     isBodyTruncated: false,
   };
 }
 
-export { CREDIT_REQUEST_RECIPIENT };
+export { CREDIT_REQUEST_CC_RECIPIENT, CREDIT_REQUEST_RECIPIENT };
