@@ -157,11 +157,6 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{isCreditInvoice ? "Credit Items" : "Invoice Items"}</h2>
-        {isCreditInvoice ? (
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            Credit detayları sadece bilgilendirme amaçlıdır. Bu sayfada ürünler için kredi talebi açılamaz.
-          </p>
-        ) : null}
         <InvoiceItemsTable items={items} customerCode={customerCode} invoiceNo={invoiceNo} allowItemSelection={!isCreditInvoice} />
       </section>
     </main>
