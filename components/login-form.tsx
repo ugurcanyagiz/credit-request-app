@@ -34,9 +34,12 @@ export function LoginForm() {
   }
 
   return (
-    <form className="w-full max-w-sm space-y-4" onSubmit={handleSubmit}>
-      <div className="space-y-1">
-        <label className="block text-sm font-medium" htmlFor="username">
+    <form className="w-full space-y-4" onSubmit={handleSubmit}>
+      <div className="space-y-1.5">
+        <label
+          className="block text-sm font-medium tracking-tight text-zinc-700 dark:text-zinc-200"
+          htmlFor="username"
+        >
           Username
         </label>
         <input
@@ -44,13 +47,17 @@ export function LoginForm() {
           name="username"
           type="text"
           required
-          className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm"
+          className="w-full rounded-xl border border-zinc-300/80 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none ring-zinc-900/5 transition placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-4 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:ring-zinc-100/10 dark:focus:border-zinc-500"
           autoComplete="username"
+          placeholder="Enter your username"
         />
       </div>
 
-      <div className="space-y-1">
-        <label className="block text-sm font-medium" htmlFor="password">
+      <div className="space-y-1.5">
+        <label
+          className="block text-sm font-medium tracking-tight text-zinc-700 dark:text-zinc-200"
+          htmlFor="password"
+        >
           Password
         </label>
         <input
@@ -58,17 +65,18 @@ export function LoginForm() {
           name="password"
           type="password"
           required
-          className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm"
+          className="w-full rounded-xl border border-zinc-300/80 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none ring-zinc-900/5 transition placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-4 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:ring-zinc-100/10 dark:focus:border-zinc-500"
           autoComplete="current-password"
+          placeholder="Enter your password"
         />
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm font-medium text-red-600 dark:text-red-400">{error}</p> : null}
 
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-md bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+        className="w-full rounded-xl bg-zinc-900 px-3.5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
       >
         {isPending ? "Signing in..." : "Sign in"}
       </button>
