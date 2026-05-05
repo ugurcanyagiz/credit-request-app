@@ -8,9 +8,10 @@ type InvoiceItemsTableProps = {
   items: InvoiceItem[];
   customerCode: string;
   invoiceNo: string;
+  allowItemSelection?: boolean;
 };
 
-export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceItemsTableProps) {
+export function InvoiceItemsTable({ items, customerCode, invoiceNo, allowItemSelection = true }: InvoiceItemsTableProps) {
   const [selectedItem, setSelectedItem] = useState<InvoiceItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -58,13 +59,17 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
               filteredItems.map((item, index) => (
                 <tr key={`${item.item_no}-${index}`} className="border-t border-zinc-200 dark:border-zinc-800">
                   <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedItem(item)}
-                      className="font-medium text-blue-700 underline-offset-2 hover:underline"
-                    >
-                      {item.item_no}
-                    </button>
+                    {allowItemSelection ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedItem(item)}
+                        className="font-medium text-blue-700 underline-offset-2 hover:underline"
+                      >
+                        {item.item_no}
+                      </button>
+                    ) : (
+                      <span className="font-medium text-zinc-900 dark:text-zinc-100">{item.item_no}</span>
+                    )}
                   </td>
                   <td className="px-3 py-2">{item.item_descp}</td>
                   <td className="px-3 py-2">{item.quantity}</td>
@@ -82,7 +87,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo }: InvoiceIte
         </table>
       </div>
 
-      {selectedItem ? (
+      {allowItemSelection && selectedItem ? (
         <ProductCreditRequestModal
           item={selectedItem}
           customerCode={customerCode}
