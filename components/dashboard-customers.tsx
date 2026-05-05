@@ -24,9 +24,16 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
       .replace(/[\u0300-\u036f]/g, "")
       .toLocaleLowerCase("en-US");
   }
-
   const filteredCustomers = useMemo(() => {
+    function toSearchTokens(value: string) {
+      return normalizeSearchValue(value)
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .split(/\s+/)
+        .filter(Boolean);
+    }
+
     const normalizedSearchTerm = normalizeSearchValue(searchTerm);
+    const searchTokens = toSearchTokens(searchTerm);
 
     if (!normalizedSearchTerm) {
       return customers;
@@ -36,10 +43,21 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
       const customerCode = normalizeSearchValue(customer.customer_code);
       const customerName = normalizeSearchValue(customer.customer_name);
 
-      return (
+      const directContainsMatch =
         customerCode.includes(normalizedSearchTerm) ||
-        customerName.includes(normalizedSearchTerm)
-      );
+        customerName.includes(normalizedSearchTerm);
+
+      if (directContainsMatch) {
+        return true;
+      }
+
+      if (searchTokens.length === 0) {
+        return false;
+      }
+
+      const searchableTokens = [...toSearchTokens(customer.customer_code), ...toSearchTokens(customer.customer_name)];
+
+      return searchTokens.every((token) => searchableTokens.some((searchableToken) => searchableToken.includes(token)));
     });
   }, [customers, searchTerm]);
 
