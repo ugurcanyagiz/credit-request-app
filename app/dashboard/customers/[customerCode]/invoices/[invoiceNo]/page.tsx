@@ -35,6 +35,7 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
   const { customerCode: rawCustomerCode, invoiceNo: rawInvoiceNo } = await params;
   const customerCode = decodeURIComponent(rawCustomerCode);
   const invoiceNo = decodeURIComponent(rawInvoiceNo);
+  const isCreditInvoice = invoiceNo.startsWith("CM-");
 
   const supabaseAdmin = getSupabaseAdmin();
   const pageSize = 1000;
@@ -143,8 +144,8 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
           <p className="text-sm text-zinc-600 dark:text-zinc-300">Customer</p>
           <h1 className="text-2xl font-semibold">{customerName ?? customerCode}</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-300">Code: {customerCode}</p>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">Invoice No: {invoiceNo}</p>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">Invoice Date: {invoiceDate ?? "-"}</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">{isCreditInvoice ? "Credit No" : "Invoice No"}: {invoiceNo}</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">{isCreditInvoice ? "Credit Date" : "Invoice Date"}: {invoiceDate ?? "-"}</p>
         </div>
         <Link
           href={`/dashboard/customers/${encodeURIComponent(customerCode)}`}
@@ -155,8 +156,8 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Invoice Items</h2>
-        <InvoiceItemsTable items={items} customerCode={customerCode} invoiceNo={invoiceNo} />
+        <h2 className="text-lg font-semibold">{isCreditInvoice ? "Credit Items" : "Invoice Items"}</h2>
+        <InvoiceItemsTable items={items} customerCode={customerCode} invoiceNo={invoiceNo} allowItemSelection={!isCreditInvoice} />
       </section>
     </main>
   );
