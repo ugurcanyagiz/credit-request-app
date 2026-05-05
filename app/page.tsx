@@ -23,12 +23,8 @@ export default async function Home() {
             src={creditAppLogo}
             alt="Credit App"
             priority
-            className="mb-4 h-14 w-auto"
+            className="mb-2 h-24 w-auto"
           />
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Sign in</h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Continue with your existing app credentials.
-          </p>
         </div>
         <LoginForm />
       </section>
