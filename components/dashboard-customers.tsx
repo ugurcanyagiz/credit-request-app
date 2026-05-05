@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
 
 type Customer = {
@@ -29,12 +29,26 @@ function tokenizeSearchValue(value: string) {
 
 export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps) {
   const [customers] = useState<Customer[]>(initialCustomers);
+
+  const uniqueCustomers = useMemo(() => {
+    const seen = new Set<string>();
+
+    return customers.filter((customer) => {
+      const dedupeKey = `${customer.customer_code}::${customer.customer_name}`;
+
+      if (seen.has(dedupeKey)) {
+        return false;
+      }
+
+      seen.add(dedupeKey);
+      return true;
+    });
+  }, [customers]);
   const [searchTerm, setSearchTerm] = useState("");
-  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   const searchableCustomers = useMemo(
     () =>
-      customers.map((customer) => {
+      uniqueCustomers.map((customer) => {
         const customerCode = typeof customer.customer_code === "string" ? customer.customer_code : "";
         const customerName = typeof customer.customer_name === "string" ? customer.customer_name : "";
 
@@ -43,15 +57,15 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
           searchableValue: normalizeSearchValue(`${customerCode} ${customerName}`),
         };
       }),
-    [customers],
+    [uniqueCustomers],
   );
 
   const filteredCustomers = useMemo(() => {
-    const normalizedSearchTerm = normalizeSearchValue(deferredSearchTerm);
-    const searchTokens = tokenizeSearchValue(deferredSearchTerm);
+    const normalizedSearchTerm = normalizeSearchValue(searchTerm);
+    const searchTokens = tokenizeSearchValue(searchTerm);
 
     if (!normalizedSearchTerm) {
-      return customers;
+      return uniqueCustomers;
     }
 
     return searchableCustomers
@@ -67,7 +81,9 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
         return searchTokens.every((token) => searchableValue.includes(token));
       })
       .map(({ customer }) => customer);
-  }, [customers, deferredSearchTerm, searchableCustomers]);
+  }, [searchTerm, searchableCustomers, uniqueCustomers]);
+
+  const isSearchActive = searchTerm.trim().length > 0;
 
   return (
     <section className="mt-6 space-y-4">
@@ -99,7 +115,6 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Search by customer code or name..."
-            aria-busy={false}
             className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 pr-10 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
           />
           {searchTerm ? (
@@ -115,10 +130,16 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
         </div>
       </div>
 
+      {isSearchActive ? (
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+          {filteredCustomers.length} matching customer(s) found.
+        </p>
+      ) : null}
+
       <ul className="space-y-2">
-        {filteredCustomers.map((customer) => (
+        {filteredCustomers.map((customer, index) => (
           <li
-            key={customer.customer_code}
+            key={`${customer.customer_code}-${customer.customer_name}-${index}`}
             className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm"
           >
             <Link
