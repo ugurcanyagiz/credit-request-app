@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
 
 type Customer = {
@@ -13,53 +13,61 @@ type DashboardCustomersProps = {
   initialCustomers: Customer[];
 };
 
+function normalizeSearchValue(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .toLocaleLowerCase("en-US")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenizeSearchValue(value: string) {
+  return normalizeSearchValue(value).split(" ").filter(Boolean);
+}
+
 export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps) {
   const [customers] = useState<Customer[]>(initialCustomers);
   const [searchTerm, setSearchTerm] = useState("");
+  const deferredSearchTerm = useDeferredValue(searchTerm);
 
-  function normalizeSearchValue(value: string) {
-    return value
-      .trim()
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLocaleLowerCase("en-US");
-  }
+  const searchableCustomers = useMemo(
+    () =>
+      customers.map((customer) => {
+        const customerCode = typeof customer.customer_code === "string" ? customer.customer_code : "";
+        const customerName = typeof customer.customer_name === "string" ? customer.customer_name : "";
+
+        return {
+          customer,
+          searchableValue: normalizeSearchValue(`${customerCode} ${customerName}`),
+        };
+      }),
+    [customers],
+  );
+
   const filteredCustomers = useMemo(() => {
-    function toSearchTokens(value: string) {
-      return normalizeSearchValue(value)
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
-        .split(/\s+/)
-        .filter(Boolean);
-    }
-
-    const normalizedSearchTerm = normalizeSearchValue(searchTerm);
-    const searchTokens = toSearchTokens(searchTerm);
+    const normalizedSearchTerm = normalizeSearchValue(deferredSearchTerm);
+    const searchTokens = tokenizeSearchValue(deferredSearchTerm);
 
     if (!normalizedSearchTerm) {
       return customers;
     }
 
-    return customers.filter((customer) => {
-      const customerCode = normalizeSearchValue(customer.customer_code);
-      const customerName = normalizeSearchValue(customer.customer_name);
+    return searchableCustomers
+      .filter(({ searchableValue }) => {
+        if (!searchableValue) {
+          return false;
+        }
 
-      const directContainsMatch =
-        customerCode.includes(normalizedSearchTerm) ||
-        customerName.includes(normalizedSearchTerm);
+        if (searchableValue.includes(normalizedSearchTerm)) {
+          return true;
+        }
 
-      if (directContainsMatch) {
-        return true;
-      }
-
-      if (searchTokens.length === 0) {
-        return false;
-      }
-
-      const searchableTokens = [...toSearchTokens(customer.customer_code), ...toSearchTokens(customer.customer_name)];
-
-      return searchTokens.every((token) => searchableTokens.some((searchableToken) => searchableToken.includes(token)));
-    });
-  }, [customers, searchTerm]);
+        return searchTokens.every((token) => searchableValue.includes(token));
+      })
+      .map(({ customer }) => customer);
+  }, [customers, deferredSearchTerm, searchableCustomers]);
 
   return (
     <section className="mt-6 space-y-4">
@@ -84,15 +92,27 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
         >
           Search customer
         </label>
-        <input
-          id="customer-search"
-          type="search"
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Search by customer code or name..."
-          aria-busy={false}
-          className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
-        />
+        <div className="relative">
+          <input
+            id="customer-search"
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search by customer code or name..."
+            aria-busy={false}
+            className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 pr-10 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
+          />
+          {searchTerm ? (
+            <button
+              type="button"
+              onClick={() => setSearchTerm("")}
+              className="absolute inset-y-0 right-2 my-auto h-7 rounded px-2 text-xs text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+              aria-label="Clear customer search"
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <ul className="space-y-2">
