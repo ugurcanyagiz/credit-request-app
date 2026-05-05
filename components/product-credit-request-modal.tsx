@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 
 type InvoiceItem = {
   item_no: string;
@@ -59,6 +59,32 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pictureError, setPictureError] = useState<string | null>(null);
   const pictureInputRef = useRef<HTMLInputElement | null>(null);
+  const reasonDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isReasonDropdownOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (!reasonDropdownRef.current?.contains(target)) {
+        setIsReasonDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [isReasonDropdownOpen]);
 
   const numericCaseCount = Number(caseCount);
   const numericPiecesPerCase = Number(piecesPerCase);
@@ -260,7 +286,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
 
         <div className="mt-5 rounded-md border border-zinc-200 dark:border-zinc-800 p-4">
           <h4 className="mb-3 font-semibold">Reason</h4>
-          <div className="relative">
+          <div ref={reasonDropdownRef} className="relative">
             <button
               type="button"
               onClick={() => setIsReasonDropdownOpen((previous) => !previous)}
@@ -272,34 +298,38 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
               <span className="ml-3 text-xs text-zinc-500 dark:text-zinc-400">{isReasonDropdownOpen ? "▲" : "▼"}</span>
             </button>
 
-            {isReasonDropdownOpen ? (
-              <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-2 shadow-lg">
-                <div className="grid gap-2 text-sm">
-                  {REASON_OPTIONS.map((option) => {
-                    const checked = selectedReason === option;
-                    return (
-                      <label key={option} className="inline-flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="credit-request-reason"
-                          checked={checked}
-                          onChange={(event) => {
-                            if (event.target.checked) {
-                              setSelectedReason(option);
-                              setIsReasonDropdownOpen(false);
-                              if (option !== "Other") {
-                                setOtherReason("");
-                              }
+            <div
+              className={`absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-zinc-300 bg-white p-2 shadow-lg transition-all duration-200 ease-out dark:border-zinc-700 dark:bg-zinc-900 ${
+                isReasonDropdownOpen
+                  ? "pointer-events-auto translate-y-0 opacity-100"
+                  : "pointer-events-none -translate-y-1 opacity-0"
+              }`}
+            >
+              <div className="grid gap-2 text-sm">
+                {REASON_OPTIONS.map((option) => {
+                  const checked = selectedReason === option;
+                  return (
+                    <label key={option} className="inline-flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="credit-request-reason"
+                        checked={checked}
+                        onChange={(event) => {
+                          if (event.target.checked) {
+                            setSelectedReason(option);
+                            setIsReasonDropdownOpen(false);
+                            if (option !== "Other") {
+                              setOtherReason("");
                             }
-                          }}
-                        />
-                        {option}
-                      </label>
-                    );
-                  })}
-                </div>
+                          }
+                        }}
+                      />
+                      {option}
+                    </label>
+                  );
+                })}
               </div>
-            ) : null}
+            </div>
           </div>
 
           {selectedReason === "Other" ? (
