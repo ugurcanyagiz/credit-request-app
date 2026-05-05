@@ -412,6 +412,11 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
                   placeholder="How many piece are in one case"
                   className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
+                {piecesPerCase.trim().length === 0 ? (
+                  <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
+                    Please enter how many pieces are in one case.
+                  </span>
+                ) : null}
               </label>
               <label className="block">
                 <span className="mb-1 block text-zinc-700 dark:text-zinc-200">Requested Piece Quantity</span>
@@ -424,6 +429,11 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
                   placeholder="How any pieces are requested for credit"
                   className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-2"
                 />
+                {requestedPieces.trim().length === 0 ? (
+                  <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
+                    Please enter the number of pieces to request credit for.
+                  </span>
+                ) : null}
               </label>
             </div>
           )}
