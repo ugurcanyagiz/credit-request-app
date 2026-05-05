@@ -54,6 +54,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
   const [selectedReason, setSelectedReason] = useState<ReasonOption | null>(null);
   const [otherReason, setOtherReason] = useState("");
   const [isReasonDropdownOpen, setIsReasonDropdownOpen] = useState(false);
+  const [isMobileReasonSheetOpen, setIsMobileReasonSheetOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -286,7 +287,18 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
 
         <div className="mt-5 rounded-md border border-zinc-200 dark:border-zinc-800 p-4">
           <h4 className="mb-3 font-semibold">Reason</h4>
-          <div ref={reasonDropdownRef} className="relative">
+          <div className="sm:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileReasonSheetOpen(true)}
+              className="flex w-full items-center justify-between rounded-xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-left text-sm shadow-sm dark:border-zinc-700 dark:bg-zinc-800/60"
+            >
+              <span className="truncate">{selectedReason ?? "Select reason"}</span>
+              <span className="ml-3 text-xs text-zinc-500 dark:text-zinc-400">›</span>
+            </button>
+          </div>
+
+          <div ref={reasonDropdownRef} className="relative hidden sm:block">
             <button
               type="button"
               onClick={() => setIsReasonDropdownOpen((previous) => !previous)}
@@ -331,6 +343,56 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
               </div>
             </div>
           </div>
+
+          {isMobileReasonSheetOpen ? (
+            <div className="fixed inset-0 z-[60] sm:hidden">
+              <button
+                type="button"
+                onClick={() => setIsMobileReasonSheetOpen(false)}
+                className="absolute inset-0 bg-black/40"
+                aria-label="Close reason selector"
+              />
+              <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4 shadow-2xl dark:bg-zinc-900">
+                <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+                <div className="mb-3 flex items-center justify-between">
+                  <h5 className="text-base font-semibold">Select Reason</h5>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileReasonSheetOpen(false)}
+                    className="rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700"
+                  >
+                    Done
+                  </button>
+                </div>
+                <div className="max-h-[50vh] space-y-2 overflow-y-auto pb-2">
+                  {REASON_OPTIONS.map((option) => {
+                    const checked = selectedReason === option;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          setSelectedReason(option);
+                          if (option !== "Other") {
+                            setOtherReason("");
+                          }
+                          setIsMobileReasonSheetOpen(false);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm ${
+                          checked
+                            ? "border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800"
+                            : "border-zinc-300 dark:border-zinc-700"
+                        }`}
+                      >
+                        <span>{option}</span>
+                        {checked ? <span className="text-xs">✓</span> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {selectedReason === "Other" ? (
             <label className="mt-3 block text-sm">
