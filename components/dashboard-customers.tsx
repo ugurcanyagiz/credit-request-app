@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
 
 type Customer = {
@@ -30,7 +30,6 @@ function tokenizeSearchValue(value: string) {
 export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps) {
   const [customers] = useState<Customer[]>(initialCustomers);
   const [searchTerm, setSearchTerm] = useState("");
-  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   const searchableCustomers = useMemo(
     () =>
@@ -47,8 +46,8 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
   );
 
   const filteredCustomers = useMemo(() => {
-    const normalizedSearchTerm = normalizeSearchValue(deferredSearchTerm);
-    const searchTokens = tokenizeSearchValue(deferredSearchTerm);
+    const normalizedSearchTerm = normalizeSearchValue(searchTerm);
+    const searchTokens = tokenizeSearchValue(searchTerm);
 
     if (!normalizedSearchTerm) {
       return customers;
@@ -67,7 +66,9 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
         return searchTokens.every((token) => searchableValue.includes(token));
       })
       .map(({ customer }) => customer);
-  }, [customers, deferredSearchTerm, searchableCustomers]);
+  }, [customers, searchTerm, searchableCustomers]);
+
+  const isSearchActive = searchTerm.trim().length > 0;
 
   return (
     <section className="mt-6 space-y-4">
@@ -99,7 +100,6 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Search by customer code or name..."
-            aria-busy={false}
             className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 pr-10 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
           />
           {searchTerm ? (
@@ -114,6 +114,12 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
           ) : null}
         </div>
       </div>
+
+      {isSearchActive ? (
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+          {filteredCustomers.length} matching customer(s) found.
+        </p>
+      ) : null}
 
       <ul className="space-y-2">
         {filteredCustomers.map((customer) => (
