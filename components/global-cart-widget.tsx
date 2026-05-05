@@ -439,9 +439,23 @@ export function GlobalCartWidget() {
           setIsOpen(true);
           void loadPhotos();
         }}
-        className="fixed right-4 top-4 z-40 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-zinc-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm transition hover:border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 dark:bg-slate-900/40"
+        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-zinc-900 dark:text-slate-200 dark:hover:bg-slate-800/60"
       >
-        Cart ({cartItemCount})
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="9" cy="20" r="1.25" />
+          <circle cx="17" cy="20" r="1.25" />
+          <path d="M3 4h2l2.3 10.2a1 1 0 0 0 1 .8h8.7a1 1 0 0 0 1-.8L20 8H7" />
+        </svg>
+        <span>Cart ({cartItemCount})</span>
       </button>
 
       {isOpen ? (
