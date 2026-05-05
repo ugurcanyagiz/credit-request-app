@@ -42,7 +42,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
       .from("credit_rows")
       .select("customer_name,invoice_no,invoice_date")
       .eq("customer_code", customerCode)
-      .order("invoice_no", { ascending: true })
+      .order("invoice_date", { ascending: false }).order("invoice_no", { ascending: false })
       .range(from, to);
     if (!isAdmin) {
       query = query.eq("salesperson", session.user.salespersonName);
@@ -79,7 +79,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
     notFound();
   }
 
-  const invoices = Array.from(invoicesByNo.values());
+  const invoices = Array.from(invoicesByNo.values()).sort((left, right) => right.invoice_date.localeCompare(left.invoice_date));
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-10">
