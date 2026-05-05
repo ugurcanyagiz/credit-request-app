@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
 
 type Customer = {
@@ -30,25 +30,44 @@ function tokenizeSearchValue(value: string) {
 export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps) {
   const [customers] = useState<Customer[]>(initialCustomers);
   const [searchTerm, setSearchTerm] = useState("");
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+
+  const searchableCustomers = useMemo(
+    () =>
+      customers.map((customer) => {
+        const customerCode = typeof customer.customer_code === "string" ? customer.customer_code : "";
+        const customerName = typeof customer.customer_name === "string" ? customer.customer_name : "";
+
+        return {
+          customer,
+          searchableValue: normalizeSearchValue(`${customerCode} ${customerName}`),
+        };
+      }),
+    [customers],
+  );
 
   const filteredCustomers = useMemo(() => {
-    const normalizedSearchTerm = normalizeSearchValue(searchTerm);
-    const searchTokens = tokenizeSearchValue(searchTerm);
+    const normalizedSearchTerm = normalizeSearchValue(deferredSearchTerm);
+    const searchTokens = tokenizeSearchValue(deferredSearchTerm);
 
     if (!normalizedSearchTerm) {
       return customers;
     }
 
-    return customers.filter((customer) => {
-      const searchableValue = normalizeSearchValue(`${customer.customer_code} ${customer.customer_name}`);
+    return searchableCustomers
+      .filter(({ searchableValue }) => {
+        if (!searchableValue) {
+          return false;
+        }
 
-      if (searchableValue.includes(normalizedSearchTerm)) {
-        return true;
-      }
+        if (searchableValue.includes(normalizedSearchTerm)) {
+          return true;
+        }
 
-      return searchTokens.every((token) => searchableValue.includes(token));
-    });
-  }, [customers, searchTerm]);
+        return searchTokens.every((token) => searchableValue.includes(token));
+      })
+      .map(({ customer }) => customer);
+  }, [customers, deferredSearchTerm, searchableCustomers]);
 
   return (
     <section className="mt-6 space-y-4">
