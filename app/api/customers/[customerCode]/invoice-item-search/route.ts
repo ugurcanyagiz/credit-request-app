@@ -46,7 +46,9 @@ export async function GET(
 
   const { customerCode: rawCustomerCode } = await context.params;
   const customerCode = decodeURIComponent(rawCustomerCode);
-  const query = new URL(request.url).searchParams.get("query")?.trim() ?? "";
+  const searchParams = new URL(request.url).searchParams;
+  const query = searchParams.get("query")?.trim() ?? "";
+  const documentType = searchParams.get("documentType") === "credits" ? "credits" : "invoices";
 
   if (query.length < 2) {
     return Response.json({ items: [] });
@@ -59,7 +61,13 @@ export async function GET(
       "invoice_no,invoice_date,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price",
     )
     .eq("customer_code", customerCode)
-    .or(`item_no.ilike.%${query}%,item_descp.ilike.%${query}%`);
+    .or(`invoice_no.ilike.%${query}%,item_no.ilike.%${query}%,item_descp.ilike.%${query}%`);
+
+  queryBuilder =
+    documentType === "credits"
+      ? queryBuilder.ilike("invoice_no", "CM-%")
+      : queryBuilder.not("invoice_no", "ilike", "CM-%");
+
   if (!isAdmin) {
     queryBuilder = queryBuilder.eq("salesperson", salespersonName);
   }
