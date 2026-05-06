@@ -30,6 +30,18 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo, invoiceDate,
     });
   }, [items, normalizedSearchTerm]);
 
+  const totals = useMemo(
+    () =>
+      filteredItems.reduce(
+        (currentTotals, item) => ({
+          quantity: currentTotals.quantity + item.quantity,
+          salesAmount: currentTotals.salesAmount + item.sales_amount,
+        }),
+        { quantity: 0, salesAmount: 0 },
+      ),
+    [filteredItems],
+  );
+
   return (
     <>
       <div className="mb-3 space-y-1">
@@ -86,6 +98,17 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo, invoiceDate,
               </tr>
             )}
           </tbody>
+          {filteredItems.length > 0 ? (
+            <tfoot className="border-t border-zinc-300 bg-zinc-50 font-semibold dark:border-zinc-700 dark:bg-zinc-900/60">
+              <tr>
+                <td colSpan={2} className="px-3 py-2 text-right">
+                  Total:
+                </td>
+                <td className="px-3 py-2">{totals.quantity}</td>
+                <td className="px-3 py-2">{formatUsdCurrency(totals.salesAmount)}</td>
+              </tr>
+            </tfoot>
+          ) : null}
         </table>
       </div>
 
