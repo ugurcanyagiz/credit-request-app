@@ -8,7 +8,6 @@ import type { Session } from "next-auth";
 type CartInsertPayload = {
   customer_code?: string;
   invoice_no?: string;
-  invoice_date?: string | null;
   item_no?: string;
   item_descp?: string;
   quantity?: number;
@@ -46,7 +45,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("credit_request_cart_items")
     .select(
-      "id,customer_code,invoice_no,invoice_date,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price,credit_type,credit_amount,created_at",
+      "id,customer_code,invoice_no,item_no,item_descp,quantity,sales_amount,sales_batch_number,sales_lot_no,batch_expiration_date,piece_price,credit_type,credit_amount,created_at",
     )
     .eq("user_id", userId)
     .eq("salesperson", session.user.salespersonName)
@@ -57,7 +56,12 @@ export async function GET() {
     return Response.json({ error: "Failed to fetch cart items" }, { status: 500 });
   }
 
-  return Response.json({ items: data ?? [] });
+  const items = (data ?? []).map((item) => ({
+    ...item,
+    invoice_date: null,
+  }));
+
+  return Response.json({ items });
 }
 
 export async function POST(request: Request) {
@@ -118,7 +122,6 @@ export async function POST(request: Request) {
     salesperson: session.user.salespersonName,
     customer_code: payload.customer_code,
     invoice_no: payload.invoice_no,
-    invoice_date: payload.invoice_date ?? null,
     item_no: payload.item_no,
     item_descp: payload.item_descp,
     quantity: payload.quantity,
