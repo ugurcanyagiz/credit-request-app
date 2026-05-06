@@ -21,8 +21,10 @@ type CustomerInvoicesViewProps = {
   invoices: InvoiceSummary[];
 };
 
+type DocumentTab = "invoices" | "credits";
+
 export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoicesViewProps) {
-  const [activeTab, setActiveTab] = useState<"invoices" | "credits">("invoices");
+  const [activeTab, setActiveTab] = useState<DocumentTab>("invoices");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -31,7 +33,7 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
   const debounceTimeoutRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  async function runSearch(nextValue: string) {
+  function runSearch(nextValue: string, documentType: DocumentTab) {
     const normalizedSearchTerm = nextValue.trim();
 
     if (normalizedSearchTerm.length < 2) {
@@ -61,9 +63,13 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
     debounceTimeoutRef.current = window.setTimeout(async () => {
       try {
         const response = await fetch(
-          `/api/customers/${encodeURIComponent(customerCode)}/invoice-item-search?query=${encodeURIComponent(normalizedSearchTerm)}`,
+          `/api/customers/${encodeURIComponent(customerCode)}/invoice-item-search?query=${encodeURIComponent(normalizedSearchTerm)}&documentType=${documentType}`,
           { signal: abortController.signal },
         );
+
+        if (abortControllerRef.current !== abortController) {
+          return;
+        }
 
         if (!response.ok) {
           setSearchError("Failed to search items.");
@@ -72,21 +78,34 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
         }
 
         const payload = (await response.json()) as { items?: SearchResultItem[] };
-        setSearchResults(payload.items ?? []);
+        if (abortControllerRef.current === abortController) {
+          setSearchResults(payload.items ?? []);
+        }
       } catch (error) {
         if ((error as Error).name === "AbortError") {
           return;
         }
 
-        setSearchError("Failed to search items.");
-        setSearchResults([]);
+        if (abortControllerRef.current === abortController) {
+          setSearchError("Failed to search items.");
+          setSearchResults([]);
+        }
       } finally {
-        setIsSearching(false);
+        if (abortControllerRef.current === abortController) {
+          setIsSearching(false);
+        }
       }
     }, 250);
   }
 
+  function handleTabChange(nextTab: DocumentTab) {
+    setActiveTab(nextTab);
+    setSelectedResult(null);
+    runSearch(searchTerm, nextTab);
+  }
+
   const isSearchActive = searchTerm.trim().length >= 2;
+  const isCreditsTab = activeTab === "credits";
   const invoiceRows = invoices.filter((invoice) => !invoice.invoice_no.startsWith("CM-"));
   const creditRows = invoices.filter((invoice) => invoice.invoice_no.startsWith("CM-"));
 
@@ -95,7 +114,7 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => setActiveTab("invoices")}
+          onClick={() => handleTabChange("invoices")}
           className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
             activeTab === "invoices"
               ? "border-zinc-800 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
@@ -106,7 +125,7 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("credits")}
+          onClick={() => handleTabChange("credits")}
           className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
             activeTab === "credits"
               ? "border-zinc-800 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
@@ -117,49 +136,60 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
         </button>
       </div>
 
-      {activeTab === "invoices" ? (
-        <div className="space-y-1">
-          <label htmlFor="customer-invoice-search" className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-            Search by Item No or Item Description
-          </label>
-          <input
-            id="customer-invoice-search"
-            type="search"
-            value={searchTerm}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              setSearchTerm(nextValue);
-              void runSearch(nextValue);
-            }}
-            placeholder="Minimum 2 characters"
-            className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
-          />
-        </div>
-      ) : null}
+      <div className="space-y-1">
+        <label htmlFor="customer-invoice-search" className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
+          Search {isCreditsTab ? "credits" : "invoices"} by Invoice No, Item No, or Item Description
+        </label>
+        <input
+          id="customer-invoice-search"
+          type="search"
+          value={searchTerm}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setSearchTerm(nextValue);
+            runSearch(nextValue, activeTab);
+          }}
+          placeholder="Minimum 2 characters"
+          className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 outline-none transition focus:border-zinc-500 dark:focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700/60"
+        />
+      </div>
 
       {searchError ? <p className="text-sm text-red-600">{searchError}</p> : null}
 
-      {activeTab === "invoices" && isSearchActive ? (
+      {isSearchActive ? (
         <div className="space-y-2">
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            {isSearching ? "Searching items..." : `${searchResults.length} matching item(s) found.`}
+            {isSearching ? `Searching ${isCreditsTab ? "credit" : "invoice"} items...` : `${searchResults.length} matching ${isCreditsTab ? "credit" : "invoice"} item(s) found.`}
           </p>
 
           {!isSearching && searchResults.length > 0 ? (
             <ul className="space-y-2">
               {searchResults.map((item, index) => (
                 <li key={`${item.invoice_no}-${item.item_no}-${index}`} className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedResult(item)}
-                    className="block w-full px-3 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
-                  >
-                    <p className="text-zinc-600 dark:text-zinc-300">Invoice No: {item.invoice_no}</p>
-                    <p className="mb-2 text-zinc-600 dark:text-zinc-300">Invoice Date: {item.invoice_date}</p>
-                    <p className="mb-2 text-zinc-600 dark:text-zinc-300">Lot Number: {item.sales_lot_no}</p>
-                    <p className="font-medium text-blue-700">{item.item_no}</p>
-                    <p className="text-zinc-700 dark:text-zinc-200">{item.item_descp}</p>
-                  </button>
+                  {isCreditsTab ? (
+                    <Link
+                      href={`/dashboard/customers/${encodeURIComponent(customerCode)}/invoices/${encodeURIComponent(item.invoice_no)}`}
+                      className="block px-3 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
+                    >
+                      <p className="text-zinc-600 dark:text-zinc-300">Credit No: {item.invoice_no}</p>
+                      <p className="mb-2 text-zinc-600 dark:text-zinc-300">Credit Date: {item.invoice_date}</p>
+                      <p className="mb-2 text-zinc-600 dark:text-zinc-300">Lot Number: {item.sales_lot_no}</p>
+                      <p className="font-medium text-blue-700">{item.item_no}</p>
+                      <p className="text-zinc-700 dark:text-zinc-200">{item.item_descp}</p>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedResult(item)}
+                      className="block w-full px-3 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
+                    >
+                      <p className="text-zinc-600 dark:text-zinc-300">Invoice No: {item.invoice_no}</p>
+                      <p className="mb-2 text-zinc-600 dark:text-zinc-300">Invoice Date: {item.invoice_date}</p>
+                      <p className="mb-2 text-zinc-600 dark:text-zinc-300">Lot Number: {item.sales_lot_no}</p>
+                      <p className="font-medium text-blue-700">{item.item_no}</p>
+                      <p className="text-zinc-700 dark:text-zinc-200">{item.item_descp}</p>
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -170,8 +200,7 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
           ) : null}
         </div>
       ) : (
-        <>
-          <ul className="space-y-2">
+        <ul className="space-y-2">
           {(activeTab === "invoices" ? invoiceRows : creditRows).map((invoice) => (
             <li key={invoice.invoice_no} className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm">
               <Link
@@ -179,13 +208,13 @@ export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoice
                 className="block px-3 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
               >
                 <p className="font-medium">{activeTab === "invoices" ? "Invoice No" : "Credit No"}: {invoice.invoice_no}</p>
-                <p className="text-zinc-600 dark:text-zinc-300">{activeTab === "invoices" ? "Invoice Date" : "Credit Date"}: {invoice.invoice_date}</p>
+                <p className="text-zinc-600 dark:text-zinc-300">
+                  {activeTab === "invoices" ? "Invoice Date" : "Credit Date"}: {invoice.invoice_date}
+                </p>
               </Link>
             </li>
           ))}
-          </ul>
-
-        </>
+        </ul>
       )}
 
       {selectedResult ? (
