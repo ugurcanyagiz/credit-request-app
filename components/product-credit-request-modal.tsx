@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 
+import { formatUsdCurrency } from "@/lib/currency";
+
 type InvoiceItem = {
   item_no: string;
   item_descp: string;
@@ -281,11 +283,11 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
           <p><span className="font-medium">Item No:</span> {item.item_no}</p>
           <p><span className="font-medium">Item Description:</span> {item.item_descp}</p>
           <p><span className="font-medium">Quantity:</span> {item.quantity}</p>
-          <p><span className="font-medium">Sales Amount:</span> {item.sales_amount}</p>
+          <p><span className="font-medium">Sales Amount:</span> {formatUsdCurrency(item.sales_amount)}</p>
           <p><span className="font-medium">Sales Batch Number:</span> {item.sales_batch_number}</p>
           <p><span className="font-medium">Sales Lot No:</span> {item.sales_lot_no}</p>
           <p><span className="font-medium">Batch Expiration Date:</span> {item.batch_expiration_date}</p>
-          <p><span className="font-medium">Case Price:</span> {item.piece_price}</p>
+          <p><span className="font-medium">Case Price:</span> {formatUsdCurrency(item.piece_price)}</p>
         </div>
 
         <div className="mt-5 rounded-md border border-zinc-200 dark:border-zinc-800 p-4">

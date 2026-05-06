@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { ProductCreditRequestModal, type InvoiceItem } from "@/components/product-credit-request-modal";
+import { formatUsdCurrency } from "@/lib/currency";
 
 type InvoiceItemsTableProps = {
   items: InvoiceItem[];
@@ -74,7 +75,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo, invoiceDate,
                   </td>
                   <td className="px-3 py-2">{item.item_descp}</td>
                   <td className="px-3 py-2">{item.quantity}</td>
-                  <td className="px-3 py-2">{item.sales_amount}</td>
+                  <td className="px-3 py-2">{formatUsdCurrency(item.sales_amount)}</td>
                 </tr>
               ))
             ) : (
