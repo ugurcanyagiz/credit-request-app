@@ -155,6 +155,8 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
       return;
     }
 
+    const itemDescriptionWithReason = `${item.item_descp} | Reason: ${resolvedReasons.join(" - ")}`;
+
     setIsSubmitting(true);
     setSubmitError(null);
     const response = await fetch("/api/cart", {
@@ -167,7 +169,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
         invoice_no: invoiceNo,
         invoice_date: invoiceDate ?? null,
         item_no: item.item_no,
-        item_descp: item.item_descp,
+        item_descp: itemDescriptionWithReason,
         quantity: requestedQuantity,
         sales_amount: item.sales_amount,
         sales_batch_number: item.sales_batch_number,
@@ -179,37 +181,8 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
       }),
     });
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-      setSubmitError(payload?.error ?? "Failed to add item to cart");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const reasonResponse = await fetch("/api/cart", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        customer_code: customerCode,
-        invoice_no: invoiceNo,
-        invoice_date: invoiceDate ?? null,
-        item_no: item.item_no,
-        item_descp: `Reason: ${resolvedReasons.join(" - ")}`,
-        quantity: 0,
-        sales_amount: 0,
-        sales_batch_number: null,
-        sales_lot_no: null,
-        batch_expiration_date: null,
-        piece_price: 0,
-        credit_type: creditType,
-        credit_amount: 0,
-      }),
-    });
-
-    if (!reasonResponse.ok) {
-      const payload = (await reasonResponse.json().catch(() => null)) as { error?: string } | null;
-      setSubmitError(payload?.error ?? "Failed to add item reason");
+      const payload = (await response.json().catch(() => null)) as { details?: string; error?: string } | null;
+      setSubmitError(payload?.details ?? payload?.error ?? "Failed to add item to cart");
       setIsSubmitting(false);
       return;
     }

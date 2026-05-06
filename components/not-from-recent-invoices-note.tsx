@@ -222,8 +222,8 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
     setIsSubmitting(false);
 
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-      setSubmitError(payload?.error ?? "Failed to add note to cart");
+      const payload = (await response.json().catch(() => null)) as { details?: string; error?: string } | null;
+      setSubmitError(payload?.details ?? payload?.error ?? "Failed to add note to cart");
       return;
     }
 
