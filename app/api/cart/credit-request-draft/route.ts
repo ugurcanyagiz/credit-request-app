@@ -59,6 +59,7 @@ function isValidCartItem(value: unknown): value is CreditRequestCartItem {
     typeof item.id === "string" &&
     typeof item.customer_code === "string" &&
     typeof item.invoice_no === "string" &&
+    (typeof item.invoice_date === "undefined" || item.invoice_date === null || typeof item.invoice_date === "string") &&
     typeof item.item_no === "string" &&
     typeof item.item_descp === "string" &&
     typeof item.quantity === "number" &&

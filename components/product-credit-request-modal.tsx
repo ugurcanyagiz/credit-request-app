@@ -43,10 +43,11 @@ type ProductCreditRequestModalProps = {
   item: InvoiceItem;
   customerCode: string;
   invoiceNo: string;
+  invoiceDate?: string | null;
   onClose: () => void;
 };
 
-export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClose }: ProductCreditRequestModalProps) {
+export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoiceDate, onClose }: ProductCreditRequestModalProps) {
   const [creditType, setCreditType] = useState<CreditType>("case");
   const [caseCount, setCaseCount] = useState<string>("");
   const [piecesPerCase, setPiecesPerCase] = useState<string>("");
@@ -162,6 +163,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
       body: JSON.stringify({
         customer_code: customerCode,
         invoice_no: invoiceNo,
+        invoice_date: invoiceDate ?? null,
         item_no: item.item_no,
         item_descp: item.item_descp,
         quantity: requestedQuantity,
@@ -189,6 +191,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, onClo
       body: JSON.stringify({
         customer_code: customerCode,
         invoice_no: invoiceNo,
+        invoice_date: invoiceDate ?? null,
         item_no: item.item_no,
         item_descp: `Reason: ${resolvedReasons.join(" - ")}`,
         quantity: 0,

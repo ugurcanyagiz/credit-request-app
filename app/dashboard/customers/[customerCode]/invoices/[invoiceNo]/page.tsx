@@ -157,7 +157,7 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{isCreditInvoice ? "Credit Items" : "Invoice Items"}</h2>
-        <InvoiceItemsTable items={items} customerCode={customerCode} invoiceNo={invoiceNo} allowItemSelection={!isCreditInvoice} />
+        <InvoiceItemsTable items={items} customerCode={customerCode} invoiceNo={invoiceNo} invoiceDate={invoiceDate} allowItemSelection={!isCreditInvoice} />
       </section>
     </main>
   );

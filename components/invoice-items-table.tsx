@@ -8,10 +8,11 @@ type InvoiceItemsTableProps = {
   items: InvoiceItem[];
   customerCode: string;
   invoiceNo: string;
+  invoiceDate?: string | null;
   allowItemSelection?: boolean;
 };
 
-export function InvoiceItemsTable({ items, customerCode, invoiceNo, allowItemSelection = true }: InvoiceItemsTableProps) {
+export function InvoiceItemsTable({ items, customerCode, invoiceNo, invoiceDate, allowItemSelection = true }: InvoiceItemsTableProps) {
   const [selectedItem, setSelectedItem] = useState<InvoiceItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -92,6 +93,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo, allowItemSel
           item={selectedItem}
           customerCode={customerCode}
           invoiceNo={invoiceNo}
+          invoiceDate={invoiceDate}
           onClose={() => setSelectedItem(null)}
         />
       ) : null}
