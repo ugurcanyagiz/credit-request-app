@@ -205,6 +205,7 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
       body: JSON.stringify({
         customer_code: customerCode,
         invoice_no: invoiceNo.trim() || "NOT_FROM_RECENT_INVOICES",
+        invoice_date: null,
         item_no: itemNo.trim() || "NOT_FROM_RECENT_INVOICES",
         item_descp: itemDescription,
         quantity: noteQuantity,

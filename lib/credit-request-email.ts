@@ -4,6 +4,7 @@ export type CreditRequestCartItem = {
   id: string;
   customer_code: string;
   invoice_no: string;
+  invoice_date?: string | null;
   item_no: string;
   item_descp: string;
   quantity: number;
@@ -23,6 +24,7 @@ export type UploadedPhotoReference = {
 };
 
 const CREDIT_REQUEST_RECIPIENT = "credit@turkanafood.com";
+const CREDIT_REQUEST_CC_RECIPIENT = "yerdogan@turkanafood.com";
 
 function money(value: number) {
   return Number.isFinite(value) ? value.toFixed(2) : "0.00";
@@ -139,6 +141,7 @@ export function buildCreditRequestDraftText({
 
   const uniqueCustomers = [...new Set(cartRows.map((item) => item.customer_code).filter(Boolean))];
   const uniqueInvoices = [...new Set(cartRows.map((item) => item.invoice_no).filter(Boolean))];
+  const uniqueInvoiceDates = [...new Set(cartRows.map((item) => (item.invoice_date ?? "").trim()).filter(Boolean))];
   const totalCreditAmount = cartRows.reduce((sum, item) => sum + Number(item.credit_amount || 0), 0);
 
   const subject = `Credit Request - Customer ${uniqueCustomers.join(", ") || "N/A"} - Invoice ${
@@ -162,6 +165,7 @@ export function buildCreditRequestDraftText({
     `Customer Code: ${uniqueCustomers.join(", ") || "-"}`,
     `Customer Name: ${compactText(customerName || "-", 64)}`,
     `Invoice No: ${uniqueInvoices.join(", ") || "-"}`,
+    `Invoice Date: ${uniqueInvoiceDates.join(", ") || "-"}`,
     `Total Requested Credit Amount: ${money(totalCreditAmount)}`,
     "",
     ...selectedItemLines,
@@ -182,11 +186,11 @@ export function buildCreditRequestDraftText({
 
 export function buildCreditRequestMailtoUrl({ subject, text }: { subject: string; text: string }) {
   const buildUrl = (body: string) =>
-    `mailto:${CREDIT_REQUEST_RECIPIENT}?subject=${encodeMailtoValue(subject)}&body=${encodeMailtoValue(body)}`;
+    `mailto:${CREDIT_REQUEST_RECIPIENT}?cc=${encodeMailtoValue(CREDIT_REQUEST_CC_RECIPIENT)}&subject=${encodeMailtoValue(subject)}&body=${encodeMailtoValue(body)}`;
   return {
     url: buildUrl(text),
     isBodyTruncated: false,
   };
 }
 
-export { CREDIT_REQUEST_RECIPIENT };
+export { CREDIT_REQUEST_CC_RECIPIENT, CREDIT_REQUEST_RECIPIENT };
