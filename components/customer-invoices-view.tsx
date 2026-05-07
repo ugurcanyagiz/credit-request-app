@@ -141,7 +141,7 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
   const isCreditsTab = activeTab === "credits";
   const invoiceRows = useMemo(() => invoices.filter((invoice) => !invoice.invoice_no.startsWith("CM-")), [invoices]);
   const creditRows = useMemo(() => invoices.filter((invoice) => invoice.invoice_no.startsWith("CM-")), [invoices]);
-  const { displayedRows, hiddenOlderCount, visibleOlderCount, showOlderRecords } = useMemo(() => {
+  const { displayedRows, hiddenOlderCount, showOlderRecords } = useMemo(() => {
     const currentRows = activeTab === "invoices" ? invoiceRows : creditRows;
     const currentVisibleOlderCount = activeTab === "invoices" ? visibleOlderInvoiceCount : visibleOlderCreditCount;
     const recentRows = currentRows.filter((invoice) => !isOlderThanCutoff(invoice.invoice_date));
@@ -150,7 +150,6 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
     return {
       displayedRows: [...recentRows, ...olderRows.slice(0, currentVisibleOlderCount)],
       hiddenOlderCount: Math.max(olderRows.length - currentVisibleOlderCount, 0),
-      visibleOlderCount: Math.min(currentVisibleOlderCount, olderRows.length),
       showOlderRecords: () => {
         if (activeTab === "invoices") {
           setVisibleOlderInvoiceCount((currentCount) => Math.min(currentCount + OLDER_RECORDS_PAGE_SIZE, olderRows.length));
@@ -271,19 +270,20 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
       )}
 
       {!isSearchActive && hiddenOlderCount > 0 ? (
-        <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50/70 px-3 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900/40">
+        <div className="flex justify-center py-2">
           <button
             type="button"
             onClick={showOlderRecords}
-            className="font-medium text-blue-700 transition-colors hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+            className="inline-flex items-center gap-4 rounded-full border-4 border-zinc-900 bg-white px-5 py-2 text-2xl font-medium text-zinc-900 shadow-sm transition-colors hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:border-zinc-100 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900 dark:focus:ring-zinc-600"
+            aria-label={`See more older ${isCreditsTab ? "credit" : "invoice"} records`}
           >
-            View older records
+            <span className="flex size-12 items-center justify-center rounded-full border-4 border-current" aria-hidden="true">
+              <svg className="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+            <span>See More</span>
           </button>
-          <p className="mt-1 text-zinc-600 dark:text-zinc-300">
-            {visibleOlderCount > 0
-              ? `Showing ${visibleOlderCount} older ${isCreditsTab ? "credit" : "invoice"} record(s). ${hiddenOlderCount} more available.`
-              : `Records dated before January 1, 2026 are hidden by default. Show the next ${Math.min(OLDER_RECORDS_PAGE_SIZE, hiddenOlderCount)} older record(s).`}
-          </p>
         </div>
       ) : null}
 
