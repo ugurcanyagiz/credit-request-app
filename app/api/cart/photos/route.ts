@@ -8,9 +8,19 @@ import { buildSupabasePublicObjectUrl } from "@/lib/supabase-storage-url";
 
 const PHOTO_BUCKET = process.env.SUPABASE_CART_PHOTOS_BUCKET || "credit-request-cart-photos";
 const CART_PHOTO_FOLDER = "cart-photos";
-const ACCEPTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const MAX_FILES_PER_UPLOAD = 8;
+const IMAGE_FILE_EXTENSIONS = new Set([
+  "avif",
+  "bmp",
+  "gif",
+  "heic",
+  "heif",
+  "jpeg",
+  "jpg",
+  "png",
+  "tif",
+  "tiff",
+  "webp",
+]);
 const SOFT_DELETE_MIGRATION_HINT =
   "Database migration required: add removed_from_cart_at column to public.credit_request_photos.";
 
@@ -22,6 +32,37 @@ type PhotoResponse = {
   storagePath: string;
   createdAt: string;
 };
+
+function getFileExtension(fileName: string) {
+  return fileName.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function isImageFile(file: File) {
+  const mimeType = file.type.toLowerCase();
+  const extension = getFileExtension(file.name);
+
+  return mimeType.startsWith("image/") || IMAGE_FILE_EXTENSIONS.has(extension);
+}
+
+function resolveUploadContentType(file: File) {
+  const mimeType = file.type.toLowerCase();
+  if (mimeType.startsWith("image/")) {
+    return mimeType;
+  }
+
+  const extension = getFileExtension(file.name);
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  if (extension === "webp") return "image/webp";
+  if (extension === "heic") return "image/heic";
+  if (extension === "heif") return "image/heif";
+  if (extension === "gif") return "image/gif";
+  if (extension === "avif") return "image/avif";
+  if (extension === "bmp") return "image/bmp";
+  if (extension === "tif" || extension === "tiff") return "image/tiff";
+
+  return "image/jpeg";
+}
 
 function toPhotoResponse(photo: {
   id: string;
@@ -84,10 +125,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "No photos provided" }, { status: 400 });
   }
 
-  if (files.length > MAX_FILES_PER_UPLOAD) {
-    return Response.json({ error: `Too many files. Maximum is ${MAX_FILES_PER_UPLOAD}.` }, { status: 400 });
-  }
-
   try {
     const draftId = await ensureCartDraftId({ userId, salesperson: session.user.salespersonName });
     const supabaseAdmin = getSupabaseAdmin();
@@ -95,15 +132,11 @@ export async function POST(request: Request) {
     const uploadedPhotos: PhotoResponse[] = [];
 
     for (const file of files) {
-      if (!ACCEPTED_IMAGE_MIME_TYPES.has(file.type)) {
-        return Response.json({ error: `Unsupported file type for ${file.name}` }, { status: 400 });
+      if (!isImageFile(file)) {
+        return Response.json({ error: `${file.name || "Selected file"} does not look like a photo.` }, { status: 400 });
       }
 
-      if (file.size > MAX_FILE_BYTES) {
-        return Response.json({ error: `${file.name} exceeds ${MAX_FILE_BYTES / (1024 * 1024)} MB limit` }, { status: 400 });
-      }
-
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_") || "photo";
       const createdAt = new Date().toISOString();
       const safeTimestamp = createdAt.replace(/[:.]/g, "-");
       const storagePath = `${folder}/${safeTimestamp}-${randomUUID()}-${sanitizedName}`;
@@ -111,7 +144,7 @@ export async function POST(request: Request) {
 
       const { error: uploadError } = await supabaseAdmin.storage
         .from(PHOTO_BUCKET)
-        .upload(storagePath, arrayBuffer, { contentType: file.type, upsert: false });
+        .upload(storagePath, arrayBuffer, { contentType: resolveUploadContentType(file), upsert: false });
 
       if (uploadError) {
         console.error("Failed to upload cart photo", uploadError);
@@ -125,17 +158,31 @@ export async function POST(request: Request) {
       }
 
       const publicUrl = buildSupabasePublicObjectUrl(PHOTO_BUCKET, storagePath);
-      const { data: insertedPhoto, error: insertError } = await supabaseAdmin
+      const insertPayload = {
+        draft_id: draftId,
+        file_name: file.name || sanitizedName,
+        public_url: publicUrl,
+        storage_path: storagePath,
+      };
+      let { data: insertedPhoto, error: insertError } = await supabaseAdmin
         .from("credit_request_photos")
         .insert({
-          draft_id: draftId,
-          file_name: file.name,
-          public_url: publicUrl,
-          storage_path: storagePath,
+          ...insertPayload,
           removed_from_cart_at: null,
         })
         .select("id,file_name,public_url,storage_path,created_at")
         .single();
+
+      if (isMissingRemovedFromCartColumnError(insertError)) {
+        const legacyInsertResult = await supabaseAdmin
+          .from("credit_request_photos")
+          .insert(insertPayload)
+          .select("id,file_name,public_url,storage_path,created_at")
+          .single();
+
+        insertedPhoto = legacyInsertResult.data;
+        insertError = legacyInsertResult.error;
+      }
 
       if (insertError || !insertedPhoto) {
         console.error("Failed to persist cart photo mapping", insertError);
