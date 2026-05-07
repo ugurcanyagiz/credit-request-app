@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { ProductCreditRequestModal, type InvoiceItem } from "@/components/product-credit-request-modal";
 import { NotFromRecentInvoicesNote } from "@/components/not-from-recent-invoices-note";
@@ -18,6 +18,36 @@ type SearchResultItem = InvoiceItem & {
 
 type DocumentTab = "invoices" | "credits";
 
+const OLDER_RECORDS_CUTOFF_DATE = "2026-01-01";
+const OLDER_RECORDS_PAGE_SIZE = 10;
+
+function toComparableDate(invoiceDate: string) {
+  const trimmedDate = invoiceDate.trim();
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmedDate);
+
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  const dottedDateMatch = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(trimmedDate);
+
+  if (dottedDateMatch) {
+    return `${dottedDateMatch[3]}-${dottedDateMatch[2]}-${dottedDateMatch[1]}`;
+  }
+
+  const parsedTimestamp = Date.parse(trimmedDate);
+
+  if (!Number.isNaN(parsedTimestamp)) {
+    return new Date(parsedTimestamp).toISOString().slice(0, 10);
+  }
+
+  return trimmedDate;
+}
+
+function isOlderThanCutoff(invoiceDate: string) {
+  return toComparableDate(invoiceDate) < OLDER_RECORDS_CUTOFF_DATE;
+}
+
 type CustomerInvoicesViewProps = {
   customerCode: string;
   invoices: InvoiceSummary[];
@@ -31,6 +61,8 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedResult, setSelectedResult] = useState<SearchResultItem | null>(null);
+  const [visibleOlderInvoiceCount, setVisibleOlderInvoiceCount] = useState(0);
+  const [visibleOlderCreditCount, setVisibleOlderCreditCount] = useState(0);
   const debounceTimeoutRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -107,8 +139,27 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
 
   const isSearchActive = searchTerm.trim().length >= 2;
   const isCreditsTab = activeTab === "credits";
-  const invoiceRows = invoices.filter((invoice) => !invoice.invoice_no.startsWith("CM-"));
-  const creditRows = invoices.filter((invoice) => invoice.invoice_no.startsWith("CM-"));
+  const invoiceRows = useMemo(() => invoices.filter((invoice) => !invoice.invoice_no.startsWith("CM-")), [invoices]);
+  const creditRows = useMemo(() => invoices.filter((invoice) => invoice.invoice_no.startsWith("CM-")), [invoices]);
+  const { displayedRows, hiddenOlderCount, showOlderRecords } = useMemo(() => {
+    const currentRows = activeTab === "invoices" ? invoiceRows : creditRows;
+    const currentVisibleOlderCount = activeTab === "invoices" ? visibleOlderInvoiceCount : visibleOlderCreditCount;
+    const recentRows = currentRows.filter((invoice) => !isOlderThanCutoff(invoice.invoice_date));
+    const olderRows = currentRows.filter((invoice) => isOlderThanCutoff(invoice.invoice_date));
+
+    return {
+      displayedRows: [...recentRows, ...olderRows.slice(0, currentVisibleOlderCount)],
+      hiddenOlderCount: Math.max(olderRows.length - currentVisibleOlderCount, 0),
+      showOlderRecords: () => {
+        if (activeTab === "invoices") {
+          setVisibleOlderInvoiceCount((currentCount) => Math.min(currentCount + OLDER_RECORDS_PAGE_SIZE, olderRows.length));
+          return;
+        }
+
+        setVisibleOlderCreditCount((currentCount) => Math.min(currentCount + OLDER_RECORDS_PAGE_SIZE, olderRows.length));
+      },
+    };
+  }, [activeTab, creditRows, invoiceRows, visibleOlderCreditCount, visibleOlderInvoiceCount]);
 
   return (
     <section className="space-y-3">
@@ -202,7 +253,7 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
         </div>
       ) : (
         <ul className="space-y-2">
-          {(activeTab === "invoices" ? invoiceRows : creditRows).map((invoice) => (
+          {displayedRows.map((invoice) => (
             <li key={invoice.invoice_no} className="rounded-md border border-zinc-200 dark:border-zinc-800 text-sm">
               <Link
                 href={`/dashboard/customers/${encodeURIComponent(customerCode)}/invoices/${encodeURIComponent(invoice.invoice_no)}`}
@@ -217,6 +268,24 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
           ))}
         </ul>
       )}
+
+      {!isSearchActive && hiddenOlderCount > 0 ? (
+        <div className="flex justify-center py-2">
+          <button
+            type="button"
+            onClick={showOlderRecords}
+            className="inline-flex items-center gap-4 rounded-full border-4 border-zinc-900 bg-white px-5 py-2 text-2xl font-medium text-zinc-900 shadow-sm transition-colors hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:border-zinc-100 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900 dark:focus:ring-zinc-600"
+            aria-label={`See more older ${isCreditsTab ? "credit" : "invoice"} records`}
+          >
+            <span className="flex size-12 items-center justify-center rounded-full border-4 border-current" aria-hidden="true">
+              <svg className="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+            <span>See More</span>
+          </button>
+        </div>
+      ) : null}
 
       {selectedResult ? (
         <ProductCreditRequestModal
