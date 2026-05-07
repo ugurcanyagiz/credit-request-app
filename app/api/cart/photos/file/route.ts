@@ -14,6 +14,10 @@ function resolveContentType(storagePath: string, fallback?: string) {
   if (extension === "webp") return "image/webp";
   if (extension === "heic") return "image/heic";
   if (extension === "heif") return "image/heif";
+  if (extension === "gif") return "image/gif";
+  if (extension === "avif") return "image/avif";
+  if (extension === "bmp") return "image/bmp";
+  if (extension === "tif" || extension === "tiff") return "image/tiff";
   return fallback || "application/octet-stream";
 }
 
