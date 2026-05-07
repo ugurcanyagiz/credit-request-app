@@ -16,15 +16,16 @@ type SearchResultItem = InvoiceItem & {
   invoice_date: string;
 };
 
+type DocumentTab = "invoices" | "credits";
+
 type CustomerInvoicesViewProps = {
   customerCode: string;
   invoices: InvoiceSummary[];
+  initialTab?: DocumentTab;
 };
 
-type DocumentTab = "invoices" | "credits";
-
-export function CustomerInvoicesView({ customerCode, invoices }: CustomerInvoicesViewProps) {
-  const [activeTab, setActiveTab] = useState<DocumentTab>("invoices");
+export function CustomerInvoicesView({ customerCode, invoices, initialTab = "invoices" }: CustomerInvoicesViewProps) {
+  const [activeTab, setActiveTab] = useState<DocumentTab>(initialTab);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);

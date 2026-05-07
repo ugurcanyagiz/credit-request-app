@@ -36,6 +36,7 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
   const customerCode = decodeURIComponent(rawCustomerCode);
   const invoiceNo = decodeURIComponent(rawInvoiceNo);
   const isCreditInvoice = invoiceNo.startsWith("CM-");
+  const backHref = `/dashboard/customers/${encodeURIComponent(customerCode)}${isCreditInvoice ? "?tab=credits" : ""}`;
 
   const supabaseAdmin = getSupabaseAdmin();
   const pageSize = 1000;
@@ -148,7 +149,7 @@ export default async function InvoiceItemsPage({ params }: InvoiceItemsPageProps
           <p className="text-sm text-zinc-600 dark:text-zinc-300">{isCreditInvoice ? "Credit Date" : "Invoice Date"}: {invoiceDate ?? "-"}</p>
         </div>
         <Link
-          href={`/dashboard/customers/${encodeURIComponent(customerCode)}`}
+          href={backHref}
           className="rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/60 dark:bg-zinc-900/40"
         >
           Back
