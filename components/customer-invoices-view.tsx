@@ -270,19 +270,17 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
       )}
 
       {!isSearchActive && hiddenOlderCount > 0 ? (
-        <div className="flex justify-center py-2">
+        <div className="flex justify-center pt-1 pb-2">
           <button
             type="button"
             onClick={showOlderRecords}
-            className="inline-flex items-center gap-4 rounded-full border-4 border-zinc-900 bg-white px-5 py-2 text-2xl font-medium text-zinc-900 shadow-sm transition-colors hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:border-zinc-100 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900 dark:focus:ring-zinc-600"
+            className="inline-flex items-center gap-2 rounded-md border border-zinc-300 bg-white px-3.5 py-1.5 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-300 focus:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 dark:focus:ring-zinc-700"
             aria-label={`See more older ${isCreditsTab ? "credit" : "invoice"} records`}
           >
-            <span className="flex size-12 items-center justify-center rounded-full border-4 border-current" aria-hidden="true">
-              <svg className="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </span>
             <span>See More</span>
+            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m5 7.5 5 5 5-5" />
+            </svg>
           </button>
         </div>
       ) : null}
