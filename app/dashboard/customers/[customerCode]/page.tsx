@@ -15,9 +15,10 @@ type CreditRowInvoice = {
 
 type CustomerInvoicesPageProps = {
   params: Promise<{ customerCode: string }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 };
 
-export default async function CustomerInvoicesPage({ params }: CustomerInvoicesPageProps) {
+export default async function CustomerInvoicesPage({ params, searchParams }: CustomerInvoicesPageProps) {
   const session = await getServerSession(authOptions);
   const isAdmin = isAdminUser(session?.user?.name);
 
@@ -26,7 +27,9 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
   }
 
   const { customerCode: rawCustomerCode } = await params;
+  const { tab } = await searchParams;
   const customerCode = decodeURIComponent(rawCustomerCode);
+  const initialTab = tab === "credits" ? "credits" : "invoices";
 
   const supabaseAdmin = getSupabaseAdmin();
   const pageSize = 1000;
@@ -96,7 +99,7 @@ export default async function CustomerInvoicesPage({ params }: CustomerInvoicesP
         </Link>
       </div>
 
-      <CustomerInvoicesView customerCode={customerCode} invoices={invoices} />
+      <CustomerInvoicesView customerCode={customerCode} invoices={invoices} initialTab={initialTab} />
     </main>
   );
 }
