@@ -71,19 +71,28 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo, invoiceDate,
           <tbody>
             {filteredItems.length > 0 ? (
               filteredItems.map((item, index) => (
-                <tr key={`${item.item_no}-${index}`} className="border-t border-zinc-200 dark:border-zinc-800">
+                <tr
+                  key={`${item.item_no}-${index}`}
+                  role={allowItemSelection ? "button" : undefined}
+                  tabIndex={allowItemSelection ? 0 : undefined}
+                  onClick={allowItemSelection ? () => setSelectedItem(item) : undefined}
+                  onKeyDown={
+                    allowItemSelection
+                      ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedItem(item);
+                          }
+                        }
+                      : undefined
+                  }
+                  className={`border-t border-zinc-200 dark:border-zinc-800 ${
+                    allowItemSelection ? "cursor-pointer transition-colors hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none dark:hover:bg-zinc-900/60 dark:focus:bg-zinc-900/60" : ""
+                  }`}
+                  aria-label={allowItemSelection ? `Open details for item ${item.item_no}` : undefined}
+                >
                   <td className="px-3 py-2">
-                    {allowItemSelection ? (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedItem(item)}
-                        className="font-medium text-blue-700 underline-offset-2 hover:underline"
-                      >
-                        {item.item_no}
-                      </button>
-                    ) : (
-                      <span className="font-medium text-zinc-900 dark:text-zinc-100">{item.item_no}</span>
-                    )}
+                    <span className={allowItemSelection ? "font-medium text-blue-700 underline-offset-2" : "font-medium text-zinc-900 dark:text-zinc-100"}>{item.item_no}</span>
                   </td>
                   <td className="px-3 py-2">{item.item_descp}</td>
                   <td className="px-3 py-2">{item.quantity}</td>
