@@ -10,17 +10,17 @@ type DashboardLayoutProps = {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <>
-      <div className="pointer-events-none fixed right-4 top-4 z-30 sm:right-6 sm:top-6">
+    <div className="min-h-screen">
+      <header className="flex w-full justify-end px-4 pt-4 sm:px-6 sm:pt-6">
         <Image
           src={creditAppLogo}
           alt="Credit App"
           priority
           className="h-16 w-auto drop-shadow-sm sm:h-20"
         />
-      </div>
+      </header>
       <GlobalCartWidget />
       {children}
-    </>
+    </div>
   );
 }
