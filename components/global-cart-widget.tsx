@@ -505,7 +505,7 @@ export function GlobalCartWidget() {
         onClick={() => {
           setIsOpen(true);
         }}
-        className="pointer-events-auto fixed bottom-4 right-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-zinc-900 dark:text-slate-200 dark:hover:bg-slate-800/60"
+        className="fixed bottom-4 right-4 z-[80] inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-zinc-900 dark:text-slate-200 dark:hover:bg-slate-800/60"
       >
         <svg
           aria-hidden="true"
@@ -525,12 +525,20 @@ export function GlobalCartWidget() {
       </button>
 
       {isOpen ? (
-        <div className="pointer-events-auto fixed inset-0 overflow-y-auto bg-slate-950/50 p-4 md:p-8">
+        <div
+          className="fixed inset-0 z-[80] overflow-y-auto bg-slate-950/50 p-4 md:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="credit-request-cart-title"
+        >
           <div className="mx-auto max-h-[calc(100vh-1.5rem)] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-zinc-900 shadow-2xl">
             <div className="border-b border-slate-200 dark:border-slate-700 px-6 py-5 md:px-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+                  <h3
+                    id="credit-request-cart-title"
+                    className="text-2xl font-semibold text-slate-900 dark:text-slate-100"
+                  >
                     Credit Request Cart
                   </h3>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
