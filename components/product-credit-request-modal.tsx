@@ -239,10 +239,10 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-3 sm:flex sm:items-center sm:justify-center sm:p-4">
-      <div className="mx-auto my-4 max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white dark:bg-zinc-900 p-5 shadow-xl sm:my-0 sm:max-h-[90vh]">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <h3 className="text-lg font-semibold">Product Detail & Credit Request</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/40 p-2 sm:p-4">
+      <div className="max-h-[calc(100dvh-1rem)] w-full max-w-[min(42rem,calc(100dvh-1rem))] overflow-y-auto rounded-lg bg-white p-3 shadow-xl dark:bg-zinc-900 sm:max-h-[90dvh] sm:p-5">
+        <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
+          <h3 className="text-base font-semibold sm:text-lg">Product Detail & Credit Request</h3>
           <button
             type="button"
             onClick={onClose}
@@ -252,42 +252,42 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
           </button>
         </div>
 
-        <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-zinc-100 shadow-sm dark:border-zinc-800 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
-          <div className="border-b border-zinc-200/80 bg-white/70 px-4 py-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/70 sm:px-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <section className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50/80 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
+          <div className="border-b border-zinc-200/80 bg-white/80 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/70">
+            <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Product details</p>
-                <h4 className="mt-2 text-lg font-semibold leading-snug text-zinc-950 dark:text-zinc-50">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">Product details</p>
+                <h4 className="mt-1 line-clamp-2 text-sm font-semibold leading-tight text-zinc-950 dark:text-zinc-50 sm:text-base">
                   {item.item_descp}
                 </h4>
               </div>
-              <div className="shrink-0 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+              <div className="shrink-0 rounded-full border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
                 #{item.item_no}
               </div>
             </div>
           </div>
 
-          <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Quantity</p>
-              <p className="mt-2 text-2xl font-semibold text-zinc-950 dark:text-zinc-50">{item.quantity}</p>
+          <div className="grid grid-cols-2 gap-2 p-2 sm:p-3">
+            <div className="rounded-md border border-zinc-200 bg-white px-2.5 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Quantity</p>
+              <p className="mt-1 text-sm font-semibold text-zinc-950 dark:text-zinc-50">{item.quantity}</p>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Sales Amount</p>
-              <p className="mt-2 text-2xl font-semibold text-zinc-950 dark:text-zinc-50">{formatUsdCurrency(item.sales_amount)}</p>
+            <div className="rounded-md border border-zinc-200 bg-white px-2.5 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Sales Amount</p>
+              <p className="mt-1 text-sm font-semibold text-zinc-950 dark:text-zinc-50">{formatUsdCurrency(item.sales_amount)}</p>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Sales Lot No</p>
-              <p className="mt-2 text-base font-semibold text-zinc-950 dark:text-zinc-50">{item.sales_lot_no}</p>
+            <div className="rounded-md border border-zinc-200 bg-white px-2.5 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Sales Lot No</p>
+              <p className="mt-1 truncate text-sm font-semibold text-zinc-950 dark:text-zinc-50">{item.sales_lot_no}</p>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Batch Expiration Date</p>
-              <p className="mt-2 text-base font-semibold text-zinc-950 dark:text-zinc-50">{item.batch_expiration_date}</p>
+            <div className="rounded-md border border-zinc-200 bg-white px-2.5 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Expiration</p>
+              <p className="mt-1 truncate text-sm font-semibold text-zinc-950 dark:text-zinc-50">{item.batch_expiration_date}</p>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 sm:col-span-2">
+            <div className="col-span-2 rounded-md border border-zinc-200 bg-white px-2.5 py-2 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Case Price</p>
-                <p className="rounded-full bg-zinc-900 px-3 py-1 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-950">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Case Price</p>
+                <p className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
                   {formatUsdCurrency(item.piece_price)}
                 </p>
               </div>
@@ -295,13 +295,13 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
           </div>
         </section>
 
-        <div className="mt-5 rounded-md border border-zinc-200 dark:border-zinc-800 p-4">
-          <h4 className="mb-3 font-semibold">Reason</h4>
+        <div className="mt-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800 sm:mt-5 sm:p-4">
+          <h4 className="mb-2 font-semibold sm:mb-3">Reason</h4>
           <div className="sm:hidden">
             <button
               type="button"
               onClick={() => setIsMobileReasonSheetOpen(true)}
-              className="flex w-full items-center justify-between rounded-xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-left text-sm shadow-sm dark:border-zinc-700 dark:bg-zinc-800/60"
+              className="flex w-full items-center justify-between rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-left text-sm shadow-sm dark:border-zinc-700 dark:bg-zinc-800/60"
             >
               <span className="truncate">{selectedReason ?? "Select reason"}</span>
               <span className="ml-3 text-xs text-zinc-500 dark:text-zinc-400">›</span>
@@ -417,10 +417,10 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
           ) : null}
         </div>
 
-        <div className="mt-5 rounded-md border border-zinc-200 dark:border-zinc-800 p-4">
-          <h4 className="mb-3 font-semibold">Credit Request Amount</h4>
+        <div className="mt-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800 sm:mt-5 sm:p-4">
+          <h4 className="mb-2 font-semibold sm:mb-3">Credit Request Amount</h4>
 
-          <div className="mb-4 flex gap-4 text-sm">
+          <div className="mb-3 flex gap-4 text-sm sm:mb-4">
             <label className="inline-flex items-center gap-2">
               <input
                 type="radio"
@@ -500,7 +500,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
             </div>
           )}
 
-          <div className="mt-4 rounded-md bg-zinc-50 dark:bg-zinc-900/40 p-3 text-sm">
+          <div className="mt-3 rounded-md bg-zinc-50 p-2.5 text-sm dark:bg-zinc-900/40 sm:mt-4 sm:p-3">
             <p className="font-medium">Calculated Credit Request Amount</p>
             <p className="mt-1 text-lg font-semibold">
               {autoCreditAmount !== null && Number.isFinite(autoCreditAmount)
@@ -520,7 +520,7 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
             onChange={(event) => void onPictureSelected(event)}
           />
 
-          <div className="mt-4 flex justify-end gap-2">
+          <div className="mt-3 flex justify-end gap-2 sm:mt-4">
             <button
               type="button"
               onClick={onPickPicture}
