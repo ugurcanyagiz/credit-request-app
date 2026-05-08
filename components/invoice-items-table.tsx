@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { MODAL_NAVIGATION_CLEANUP_EVENT } from "@/components/navigation-modal-cleanup";
 import { ProductCreditRequestModal, type InvoiceItem } from "@/components/product-credit-request-modal";
 import { formatUsdCurrency } from "@/lib/currency";
 
@@ -29,6 +30,17 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo, invoiceDate,
       return itemNo.includes(normalizedSearchTerm) || itemDescription.includes(normalizedSearchTerm);
     });
   }, [items, normalizedSearchTerm]);
+
+  useEffect(() => {
+    function resetPopupState() {
+      setSelectedItem(null);
+    }
+
+    window.addEventListener(MODAL_NAVIGATION_CLEANUP_EVENT, resetPopupState);
+    return () => {
+      window.removeEventListener(MODAL_NAVIGATION_CLEANUP_EVENT, resetPopupState);
+    };
+  }, []);
 
   const totals = useMemo(
     () =>

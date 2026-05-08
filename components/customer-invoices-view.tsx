@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { MODAL_NAVIGATION_CLEANUP_EVENT } from "@/components/navigation-modal-cleanup";
 import { ProductCreditRequestModal, type InvoiceItem } from "@/components/product-credit-request-modal";
 import { NotFromRecentInvoicesNote } from "@/components/not-from-recent-invoices-note";
 
@@ -65,6 +66,17 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
   const [visibleOlderCreditCount, setVisibleOlderCreditCount] = useState(0);
   const debounceTimeoutRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    function resetPopupState() {
+      setSelectedResult(null);
+    }
+
+    window.addEventListener(MODAL_NAVIGATION_CLEANUP_EVENT, resetPopupState);
+    return () => {
+      window.removeEventListener(MODAL_NAVIGATION_CLEANUP_EVENT, resetPopupState);
+    };
+  }, []);
 
   function runSearch(nextValue: string, documentType: DocumentTab) {
     const normalizedSearchTerm = nextValue.trim();

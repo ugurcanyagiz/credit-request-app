@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import type { ChangeEvent, MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-
+import { cleanupDocumentInteractionState, MODAL_NAVIGATION_CLEANUP_EVENT } from "@/components/navigation-modal-cleanup";
 import type { CreditRequestCartItem } from "@/lib/credit-request-email";
 
 type CartItem = CreditRequestCartItem;
@@ -67,12 +66,6 @@ function toReasonRowKey(item: CartItem) {
   return `${item.customer_code}::${item.invoice_no}::${item.item_no}`;
 }
 
-function cleanupDocumentInteractionState() {
-  document.body.classList.remove("modal-open");
-  document.body.style.overflow = "";
-  document.body.style.pointerEvents = "";
-  document.body.style.position = "";
-}
 
 export function GlobalCartWidget() {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -89,7 +82,6 @@ export function GlobalCartWidget() {
   const [removeAllError, setRemoveAllError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [pickupSelectionsById, setPickupSelectionsById] = useState<Record<string, boolean>>({});
-  const pathname = usePathname();
   const fileInputId = useId();
 
   const cartRows = useMemo(() => {
@@ -415,24 +407,14 @@ export function GlobalCartWidget() {
   }, [isOpen, selectedPicture]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      closeCartModal();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [closeCartModal, pathname]);
-
-  useEffect(() => {
     function restoreCleanInteractiveState() {
       closeCartModal();
     }
 
-    window.addEventListener("pageshow", restoreCleanInteractiveState);
-    window.addEventListener("popstate", restoreCleanInteractiveState);
+    window.addEventListener(MODAL_NAVIGATION_CLEANUP_EVENT, restoreCleanInteractiveState);
 
     return () => {
-      window.removeEventListener("pageshow", restoreCleanInteractiveState);
-      window.removeEventListener("popstate", restoreCleanInteractiveState);
+      window.removeEventListener(MODAL_NAVIGATION_CLEANUP_EVENT, restoreCleanInteractiveState);
       cleanupDocumentInteractionState();
     };
   }, [closeCartModal]);
