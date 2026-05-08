@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, MouseEvent as ReactMouseEvent } from "react";
 
+import { cleanupDocumentInteractionState, MODAL_NAVIGATION_CLEANUP_EVENT } from "@/components/navigation-modal-cleanup";
+
 type CreditType = "case" | "piece";
 
 type NotFromRecentInvoicesNoteProps = {
@@ -35,6 +37,19 @@ export function NotFromRecentInvoicesNote({ customerCode }: NotFromRecentInvoice
   const pictureInputId = useId();
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const [pictureError, setPictureError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function resetPopupState() {
+      setIsModalOpen(false);
+      resetLookupState();
+      cleanupDocumentInteractionState();
+    }
+
+    window.addEventListener(MODAL_NAVIGATION_CLEANUP_EVENT, resetPopupState);
+    return () => {
+      window.removeEventListener(MODAL_NAVIGATION_CLEANUP_EVENT, resetPopupState);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
