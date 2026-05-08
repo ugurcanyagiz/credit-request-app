@@ -499,7 +499,7 @@ export function GlobalCartWidget() {
   }
 
   return (
-    <>
+    <div className="fixed inset-0 z-[80] pointer-events-none">
       <button
         type="button"
         onClick={() => {
@@ -846,6 +846,6 @@ export function GlobalCartWidget() {
           ) : null}
         </div>
       ) : null}
-    </>
+    </div>
   );
 }
