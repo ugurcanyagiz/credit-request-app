@@ -252,16 +252,48 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
           </button>
         </div>
 
-        <div className="grid gap-2 text-sm">
-          <p><span className="font-medium">Item No:</span> {item.item_no}</p>
-          <p><span className="font-medium">Item Description:</span> {item.item_descp}</p>
-          <p><span className="font-medium">Quantity:</span> {item.quantity}</p>
-          <p><span className="font-medium">Sales Amount:</span> {formatUsdCurrency(item.sales_amount)}</p>
-          <p><span className="font-medium">Sales Batch Number:</span> {item.sales_batch_number}</p>
-          <p><span className="font-medium">Sales Lot No:</span> {item.sales_lot_no}</p>
-          <p><span className="font-medium">Batch Expiration Date:</span> {item.batch_expiration_date}</p>
-          <p><span className="font-medium">Case Price:</span> {formatUsdCurrency(item.piece_price)}</p>
-        </div>
+        <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-zinc-100 shadow-sm dark:border-zinc-800 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+          <div className="border-b border-zinc-200/80 bg-white/70 px-4 py-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/70 sm:px-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Product details</p>
+                <h4 className="mt-2 text-lg font-semibold leading-snug text-zinc-950 dark:text-zinc-50">
+                  {item.item_descp}
+                </h4>
+              </div>
+              <div className="shrink-0 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                #{item.item_no}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Quantity</p>
+              <p className="mt-2 text-2xl font-semibold text-zinc-950 dark:text-zinc-50">{item.quantity}</p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Sales Amount</p>
+              <p className="mt-2 text-2xl font-semibold text-zinc-950 dark:text-zinc-50">{formatUsdCurrency(item.sales_amount)}</p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Sales Lot No</p>
+              <p className="mt-2 text-base font-semibold text-zinc-950 dark:text-zinc-50">{item.sales_lot_no}</p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Batch Expiration Date</p>
+              <p className="mt-2 text-base font-semibold text-zinc-950 dark:text-zinc-50">{item.batch_expiration_date}</p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 sm:col-span-2">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Case Price</p>
+                <p className="rounded-full bg-zinc-900 px-3 py-1 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-950">
+                  {formatUsdCurrency(item.piece_price)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="mt-5 rounded-md border border-zinc-200 dark:border-zinc-800 p-4">
           <h4 className="mb-3 font-semibold">Reason</h4>
