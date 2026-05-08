@@ -77,11 +77,13 @@ export function GlobalCartWidget() {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isRemovingAll, setIsRemovingAll] = useState(false);
+  const [isRefreshingCart, setIsRefreshingCart] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [removeAllError, setRemoveAllError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [pickupSelectionsById, setPickupSelectionsById] = useState<Record<string, boolean>>({});
   const fileInputId = useId();
+  const [fileInputVersion, setFileInputVersion] = useState(0);
 
   const cartRows = useMemo(() => {
     const isManualNote = (item: CartItem) => isStandaloneReasonRow(item);
@@ -178,6 +180,22 @@ export function GlobalCartWidget() {
     setAuthorized(true);
   }, []);
 
+  const refreshCartView = useCallback(async () => {
+    setIsRefreshingCart(true);
+    setPhotoError(null);
+    setSendError(null);
+    setRemoveAllError(null);
+    setSelectedPicture(null);
+    setIsPreviewImageBroken(false);
+    setFileInputVersion((version) => version + 1);
+
+    try {
+      await Promise.all([loadCart(), loadPhotos()]);
+    } finally {
+      setIsRefreshingCart(false);
+    }
+  }, [loadCart, loadPhotos]);
+
   async function deleteCartItemById(id: string) {
     const response = await fetch(`/api/cart?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
@@ -209,7 +227,7 @@ export function GlobalCartWidget() {
   }
 
   function onPickPictures(event: ReactMouseEvent<HTMLLabelElement>) {
-    if (isUploadingPictures) {
+    if (isUploadingPictures || isRefreshingCart) {
       event.preventDefault();
       return;
     }
@@ -440,7 +458,7 @@ export function GlobalCartWidget() {
         type="button"
         onClick={() => {
           setIsOpen(true);
-          void loadPhotos();
+          void refreshCartView();
         }}
         className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-zinc-900 dark:text-slate-200 dark:hover:bg-slate-800/60"
       >
@@ -474,7 +492,7 @@ export function GlobalCartWidget() {
                   <button
                     type="button"
                     onClick={() => void sendCreditRequest()}
-                    disabled={displayRows.length === 0 || isSending || isRemovingAll}
+                    disabled={displayRows.length === 0 || isSending || isRemovingAll || isRefreshingCart}
                     className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSending ? "Preparing Email Draft..." : "Send Credit Request"}
@@ -482,7 +500,7 @@ export function GlobalCartWidget() {
                   <button
                     type="button"
                     onClick={() => void removeAllFromCart()}
-                    disabled={(items.length === 0 && pictures.length === 0) || isRemovingAll}
+                    disabled={(items.length === 0 && pictures.length === 0) || isRemovingAll || isRefreshingCart}
                     className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isRemovingAll ? "Removing..." : "Remove All"}
@@ -500,7 +518,11 @@ export function GlobalCartWidget() {
             </div>
 
             <div className="space-y-6 px-6 py-6 md:px-8">
-              {displayRows.length === 0 ? (
+              {isRefreshingCart ? (
+                <p className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-4 py-5 text-sm text-slate-500 dark:text-slate-400">
+                  Refreshing cart...
+                </p>
+              ) : displayRows.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-4 py-5 text-sm text-slate-500 dark:text-slate-400">
                   No items in cart yet.
                 </p>
@@ -573,26 +595,29 @@ export function GlobalCartWidget() {
                     type="file"
                     multiple
                     accept="image/*"
+                    key={fileInputVersion}
                     onChange={(event) => {
                       void onPicturesSelected(event);
                     }}
                     className="sr-only"
-                    disabled={isUploadingPictures}
+                    disabled={isUploadingPictures || isRefreshingCart}
                   />
                   <label
                     htmlFor={fileInputId}
                     onClick={onPickPictures}
-                    aria-disabled={isUploadingPictures}
+                    aria-disabled={isUploadingPictures || isRefreshingCart}
                     className={`rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:bg-slate-800 ${
-                      isUploadingPictures ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                      isUploadingPictures || isRefreshingCart ? "cursor-not-allowed opacity-50" : "cursor-pointer"
                     }`}
                   >
-                    {isUploadingPictures ? "Uploading..." : "Add Photos"}
+                    {isUploadingPictures ? "Uploading..." : isRefreshingCart ? "Refreshing..." : "Add Photos"}
                   </label>
                 </div>
 
                 <div className="mt-4 min-h-14 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-zinc-900 p-3">
-                  {isUploadingPictures ? (
+                  {isRefreshingCart ? (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Refreshing photo evidence...</p>
+                  ) : isUploadingPictures ? (
                     <p className="text-xs text-slate-500 dark:text-slate-400">Uploading photo evidence...</p>
                   ) : pictures.length > 0 ? (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
