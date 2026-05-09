@@ -82,6 +82,7 @@ export function GlobalCartWidget() {
   const [removeAllError, setRemoveAllError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [pickupSelectionsById, setPickupSelectionsById] = useState<Record<string, boolean>>({});
+  const [cartInteractionRevision, setCartInteractionRevision] = useState(0);
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -184,6 +185,21 @@ export function GlobalCartWidget() {
     setAuthorized(true);
   }, []);
 
+  const scheduleCartInteractionRefresh = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      setCartInteractionRevision((currentRevision) => currentRevision + 1);
+    });
+  }, []);
+
+  const resetCartTransientUiState = useCallback(() => {
+    setIsSending(false);
+    setIsRemovingAll(false);
+    setIsUploadingPictures(false);
+    setSelectedPicture(null);
+    setIsPreviewImageBroken(false);
+    scheduleCartInteractionRefresh();
+  }, [scheduleCartInteractionRefresh]);
+
   const closeCartModal = useCallback(() => {
     setIsOpen(false);
     setSelectedPicture(null);
@@ -193,8 +209,11 @@ export function GlobalCartWidget() {
   const openCartModal = useCallback(() => {
     window.dispatchEvent(new Event(MODAL_NAVIGATION_CLEANUP_EVENT));
     cleanupDocumentInteractionState();
+    resetCartTransientUiState();
     setIsOpen(true);
-  }, []);
+    void loadCart();
+    void loadPhotos();
+  }, [loadCart, loadPhotos, resetCartTransientUiState]);
 
   async function deleteCartItemById(id: string) {
     const response = await fetch(`/api/cart?id=${encodeURIComponent(id)}`, {
@@ -447,15 +466,27 @@ export function GlobalCartWidget() {
       void loadPhotos();
     }
 
+    function handlePageShow(event: PageTransitionEvent) {
+      if (!event.persisted) {
+        return;
+      }
+
+      resetCartTransientUiState();
+      void loadCart();
+      void loadPhotos();
+    }
+
     window.addEventListener("cart-updated", handleUpdated);
     window.addEventListener("cart-photos-updated", handlePhotosUpdated);
+    window.addEventListener("pageshow", handlePageShow);
 
     return () => {
       window.clearTimeout(timeoutId);
       window.removeEventListener("cart-updated", handleUpdated);
       window.removeEventListener("cart-photos-updated", handlePhotosUpdated);
+      window.removeEventListener("pageshow", handlePageShow);
     };
-  }, [loadCart, loadPhotos]);
+  }, [loadCart, loadPhotos, resetCartTransientUiState]);
 
   useEffect(() => {
     if (!selectedPicture) {
@@ -503,7 +534,10 @@ export function GlobalCartWidget() {
       </button>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950/60 px-3 py-4 backdrop-blur-sm sm:px-6 md:py-8">
+        <div
+          className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950/60 px-3 py-4 backdrop-blur-sm sm:px-6 md:py-8"
+          data-interaction-revision={cartInteractionRevision}
+        >
           <div className="mx-auto flex max-h-[calc(100vh-2rem)] w-full max-w-[1180px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-zinc-900 md:max-h-[calc(100vh-4rem)]">
             <div className="border-b border-slate-200 bg-white/95 px-5 py-5 dark:border-slate-700 dark:bg-zinc-900/95 md:px-8">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
