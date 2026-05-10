@@ -836,6 +836,31 @@ export function GlobalCartWidget() {
                 />
               </div>
 
+              {isRemoveAllConfirmOpen ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                  <p className="font-semibold">Remove all credit request cart items and all uploaded photo evidence?</p>
+                  <p className="mt-1 text-xs">This action cannot be undone.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void confirmRemoveAllFromCart()}
+                      disabled={isRemovingAll}
+                      className="inline-flex h-8 items-center justify-center rounded-lg bg-rose-700 px-3 text-xs font-semibold text-white transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isRemovingAll ? "Removing..." : "Yes, Remove All"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelRemoveAllFromCart}
+                      disabled={isRemovingAll}
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-rose-300 bg-white px-3 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
               {sendError ? (
                 <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{sendError}</p>
               ) : null}
