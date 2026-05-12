@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 
 type Customer = {
@@ -29,6 +29,8 @@ function tokenizeSearchValue(value: string) {
 
 export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps) {
   const [customers] = useState<Customer[]>(initialCustomers);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const uniqueCustomers = useMemo(() => {
     const seen = new Set<string>();
@@ -85,6 +87,55 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
 
   const isSearchActive = searchTerm.trim().length > 0;
 
+  useEffect(() => {
+    if (!isTutorialOpen) {
+      return;
+    }
+
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    video.currentTime = 0;
+    const playPromise = video.play();
+
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // Some browsers may still block autoplay; controls remain available.
+      });
+    }
+  }, [isTutorialOpen]);
+
+  useEffect(() => {
+    if (!isTutorialOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeTutorial();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isTutorialOpen]);
+
+  function closeTutorial() {
+    const video = videoRef.current;
+
+    if (video) {
+      video.pause();
+      video.currentTime = 0;
+    }
+
+    setIsTutorialOpen(false);
+  }
+
   return (
     <section className="mt-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -92,13 +143,22 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
           <h2 className="text-lg font-semibold">Customers</h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">Browse invoices by customer.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-sm"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsTutorialOpen(true)}
+            className="rounded-md border border-sky-500 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 transition hover:bg-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:border-sky-400/70 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-900/60"
+          >
+            Tutorial
+          </button>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm transition hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:hover:bg-zinc-900 dark:focus:ring-zinc-700/60"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       <div>
@@ -157,6 +217,40 @@ export function DashboardCustomers({ initialCustomers }: DashboardCustomersProps
         <p className="text-sm text-zinc-600 dark:text-zinc-300">
           No customers found for this search.
         </p>
+      ) : null}
+
+      {isTutorialOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Tutorial video"
+          onClick={closeTutorial}
+        >
+          <div
+            className="relative w-full max-w-[390px] rounded-xl bg-white p-3 shadow-2xl dark:bg-zinc-950"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeTutorial}
+              className="absolute -right-2 -top-2 rounded-full bg-white px-2.5 py-1 text-lg font-semibold leading-none text-zinc-700 shadow-md transition hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              aria-label="Close tutorial video"
+            >
+              ×
+            </button>
+            <video
+              ref={videoRef}
+              autoPlay
+              controls
+              playsInline
+              preload="auto"
+              className="aspect-[9/16] max-h-[82vh] w-full rounded-lg bg-black object-contain"
+            >
+              <source src="/api/tutorial-video" type="video/mp4" />
+            </video>
+          </div>
+        </div>
       ) : null}
     </section>
   );
