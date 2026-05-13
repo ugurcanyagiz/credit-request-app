@@ -6,6 +6,11 @@ import { MODAL_NAVIGATION_CLEANUP_EVENT } from "@/components/navigation-modal-cl
 import { ProductCreditRequestModal, type InvoiceItem } from "@/components/product-credit-request-modal";
 import { formatUsdCurrency } from "@/lib/currency";
 
+function formatFreeTxtReason(freeTxt: string | null | undefined) {
+  const trimmedReason = freeTxt?.trim();
+  return trimmedReason && trimmedReason !== "0" ? trimmedReason : "-";
+}
+
 type InvoiceItemsTableProps = {
   items: InvoiceItem[];
   customerCode: string;
@@ -112,7 +117,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo, invoiceDate,
                   <td className="px-3 py-2">{item.item_descp}</td>
                   <td className="px-3 py-2">{item.quantity}</td>
                   <td className="px-3 py-2">{formatUsdCurrency(item.sales_amount)}</td>
-                  {showReasonColumn ? <td className="px-3 py-2">{item.free_txt?.trim() || "-"}</td> : null}
+                  {showReasonColumn ? <td className="px-3 py-2">{formatFreeTxtReason(item.free_txt)}</td> : null}
                 </tr>
               ))
             ) : (

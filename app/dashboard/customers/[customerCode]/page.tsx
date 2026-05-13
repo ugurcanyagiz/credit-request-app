@@ -19,6 +19,11 @@ type CustomerInvoicesPageProps = {
   searchParams: Promise<{ tab?: string | string[] }>;
 };
 
+function hasDisplayableFreeTxtReason(freeTxt: string | null) {
+  const trimmedReason = freeTxt?.trim();
+  return Boolean(trimmedReason && trimmedReason !== "0");
+}
+
 export default async function CustomerInvoicesPage({ params, searchParams }: CustomerInvoicesPageProps) {
   const session = await getServerSession(authOptions);
   const isAdmin = isAdminUser(session?.user?.name);
@@ -74,7 +79,7 @@ export default async function CustomerInvoicesPage({ params, searchParams }: Cus
             invoice_date: row.invoice_date,
             free_txt: row.free_txt,
           });
-        } else if (!existingInvoice.free_txt && row.free_txt) {
+        } else if (!hasDisplayableFreeTxtReason(existingInvoice.free_txt) && hasDisplayableFreeTxtReason(row.free_txt)) {
           existingInvoice.free_txt = row.free_txt;
         }
       }
