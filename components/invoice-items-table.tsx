@@ -11,15 +11,27 @@ function formatFreeTxtReason(freeTxt: string | null | undefined) {
   return trimmedReason && trimmedReason !== "0" ? trimmedReason : "-";
 }
 
+type InvoiceItemWithReason = InvoiceItem & {
+  free_txt?: string | null;
+};
+
 type InvoiceItemsTableProps = {
-  items: InvoiceItem[];
+  items: InvoiceItemWithReason[];
   customerCode: string;
   invoiceNo: string;
   invoiceDate?: string | null;
   allowItemSelection?: boolean;
+  showReason?: boolean;
 };
 
-export function InvoiceItemsTable({ items, customerCode, invoiceNo, invoiceDate, allowItemSelection = true }: InvoiceItemsTableProps) {
+export function InvoiceItemsTable({
+  items,
+  customerCode,
+  invoiceNo,
+  invoiceDate,
+  allowItemSelection = true,
+  showReason = false,
+}: InvoiceItemsTableProps) {
   const [selectedItem, setSelectedItem] = useState<InvoiceItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -47,7 +59,7 @@ export function InvoiceItemsTable({ items, customerCode, invoiceNo, invoiceDate,
     };
   }, []);
 
-  const showReasonColumn = items.some((item) => Boolean(item.free_txt?.trim()));
+  const showReasonColumn = showReason;
 
   const totals = useMemo(
     () =>
