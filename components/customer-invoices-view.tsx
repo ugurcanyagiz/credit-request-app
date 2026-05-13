@@ -10,6 +10,7 @@ import { NotFromRecentInvoicesNote } from "@/components/not-from-recent-invoices
 type InvoiceSummary = {
   invoice_no: string;
   invoice_date: string;
+  free_txt: string | null;
 };
 
 type SearchResultItem = InvoiceItem & {
@@ -21,6 +22,11 @@ type DocumentTab = "invoices" | "credits";
 
 const OLDER_RECORDS_CUTOFF_DATE = "2026-01-01";
 const OLDER_RECORDS_PAGE_SIZE = 10;
+
+function formatFreeTxtReason(freeTxt: string | null | undefined) {
+  const trimmedReason = freeTxt?.trim();
+  return trimmedReason && trimmedReason !== "0" ? trimmedReason : "-";
+}
 
 function toComparableDate(invoiceDate: string) {
   const trimmedDate = invoiceDate.trim();
@@ -238,6 +244,7 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
                       <p className="text-zinc-600 dark:text-zinc-300">Credit No: {item.invoice_no}</p>
                       <p className="mb-2 text-zinc-600 dark:text-zinc-300">Credit Date: {item.invoice_date}</p>
                       <p className="mb-2 text-zinc-600 dark:text-zinc-300">Lot Number: {item.sales_lot_no}</p>
+                      <p className="mb-2 text-zinc-600 dark:text-zinc-300">Reason: {formatFreeTxtReason(item.free_txt)}</p>
                       <p className="font-medium text-blue-700">{item.item_no}</p>
                       <p className="text-zinc-700 dark:text-zinc-200">{item.item_descp}</p>
                     </Link>
@@ -275,6 +282,9 @@ export function CustomerInvoicesView({ customerCode, invoices, initialTab = "inv
                 <p className="text-zinc-600 dark:text-zinc-300">
                   {activeTab === "invoices" ? "Invoice Date" : "Credit Date"}: {invoice.invoice_date}
                 </p>
+                {activeTab === "credits" ? (
+                  <p className="text-zinc-600 dark:text-zinc-300">Reason: {formatFreeTxtReason(invoice.free_txt)}</p>
+                ) : null}
               </Link>
             </li>
           ))}
