@@ -27,27 +27,25 @@ type InvoiceItem = {
 
 type CreditType = "case" | "piece";
 type ReasonOption =
+  | "Did Not Want / Refused"
   | "Damaged"
+  | "Short Date Delivery"
   | "Molded"
-  | "Leaking"
   | "Sugared"
-  | "Spoiled"
-  | "Wrong Item"
+  | "Wrong Item / Price"
   | "Expired"
   | "Missing"
-  | "Refused"
   | "Other";
 
 const REASON_OPTIONS: ReasonOption[] = [
+  "Did Not Want / Refused",
   "Damaged",
+  "Short Date Delivery",
   "Molded",
-  "Leaking",
   "Sugared",
-  "Spoiled",
-  "Wrong Item",
+  "Wrong Item / Price",
   "Expired",
   "Missing",
-  "Refused",
   "Other",
 ];
 
