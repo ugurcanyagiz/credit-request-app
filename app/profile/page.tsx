@@ -11,10 +11,12 @@ type AnalyticsRow = {
   customer_name: string | null;
   invoice_no: string | null;
   invoice_date: string | null;
+  invoice_year: number | string | null;
+  invoice_month: number | string | null;
   item_no: string | null;
   item_descp: string | null;
   quantity: number | string | null;
-  sales_amount: number | string | null;
+  sales_amount_num: number | string | null;
 };
 
 type NamedTotal = {
@@ -47,6 +49,8 @@ type RecentInvoice = {
   quantity: number;
 };
 
+const PROFILE_YEAR = 2026;
+
 const MONTHS = [
   "Jan",
   "Feb",
@@ -68,7 +72,7 @@ function toNumber(value: number | string | null) {
   }
 
   if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number(value);
+    const parsed = Number(value.replace(/[$,]/g, ""));
 
     if (Number.isFinite(parsed)) {
       return parsed;
@@ -111,6 +115,31 @@ function formatDate(value: string) {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+function getMonthIndex(invoiceMonth: number | string | null) {
+  if (typeof invoiceMonth === "number" && Number.isInteger(invoiceMonth)) {
+    const zeroBasedMonth = invoiceMonth - 1;
+    return zeroBasedMonth >= 0 && zeroBasedMonth < MONTHS.length ? zeroBasedMonth : null;
+  }
+
+  if (typeof invoiceMonth === "string") {
+    const trimmedMonth = invoiceMonth.trim();
+    const numericMonth = Number(trimmedMonth);
+
+    if (Number.isInteger(numericMonth)) {
+      const zeroBasedMonth = numericMonth - 1;
+      return zeroBasedMonth >= 0 && zeroBasedMonth < MONTHS.length ? zeroBasedMonth : null;
+    }
+
+    const monthNameIndex = MONTHS.findIndex((month) =>
+      month.toLocaleLowerCase("en-US") === trimmedMonth.slice(0, 3).toLocaleLowerCase("en-US"),
+    );
+
+    return monthNameIndex >= 0 ? monthNameIndex : null;
+  }
+
+  return null;
 }
 
 function upsertNamedTotal(
@@ -252,7 +281,7 @@ function DataTable({
 
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
-  const salespersonName = session?.user?.salespersonName;
+  const salespersonName = session?.user?.salespersonName?.trim();
 
   if (!salespersonName) {
     redirect("/");
@@ -268,12 +297,13 @@ export default async function ProfilePage() {
     const to = from + pageSize - 1;
     const { data, error } = await supabaseAdmin
       .from("credit_rows_analytics")
-      .select("salesperson,customer_code,customer_name,invoice_no,invoice_date,item_no,item_descp,quantity,sales_amount")
-      .eq("salesperson", salespersonName)
-      .gte("invoice_date", "2026-01-01")
-      .lt("invoice_date", "2027-01-01")
+      .select(
+        "salesperson,customer_code,customer_name,invoice_no,invoice_date,invoice_year,invoice_month,item_no,item_descp,quantity,sales_amount_num",
+      )
+      .ilike("salesperson", salespersonName)
+      .eq("invoice_year", PROFILE_YEAR)
       .not("invoice_no", "ilike", "CM-%")
-      .order("invoice_date", { ascending: false })
+      .order("invoice_month", { ascending: false })
       .range(from, to);
 
     if (error) {
@@ -297,7 +327,7 @@ export default async function ProfilePage() {
   let totalQuantity = 0;
 
   for (const row of rows) {
-    const sales = toNumber(row.sales_amount);
+    const sales = toNumber(row.sales_amount_num);
     const quantity = toNumber(row.quantity);
     totalSales += sales;
     totalQuantity += quantity;
@@ -310,14 +340,11 @@ export default async function ProfilePage() {
       uniqueInvoices.add(row.invoice_no);
     }
 
-    if (row.invoice_date) {
-      const date = new Date(`${row.invoice_date}T00:00:00`);
-      const monthIndex = date.getUTCMonth();
+    const monthIndex = getMonthIndex(row.invoice_month);
 
-      if (!Number.isNaN(date.getTime()) && monthIndex >= 0 && monthIndex < 12) {
-        monthlyTotals[monthIndex].sales += sales;
-        monthlyTotals[monthIndex].quantity += quantity;
-      }
+    if (monthIndex !== null) {
+      monthlyTotals[monthIndex].sales += sales;
+      monthlyTotals[monthIndex].quantity += quantity;
     }
 
     upsertNamedTotal(customerTotals, row.customer_code, row.customer_name, sales, quantity, row.invoice_no);
@@ -363,7 +390,7 @@ export default async function ProfilePage() {
       <div className="mx-auto w-full max-w-7xl space-y-8">
         <header className="flex flex-col gap-4 rounded-3xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/70 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.28em] text-sky-700 dark:text-sky-300">2026</p>
+            <p className="text-sm font-medium uppercase tracking-[0.28em] text-sky-700 dark:text-sky-300">{PROFILE_YEAR}</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Salesperson Profile</h1>
             <p className="mt-2 text-sm font-medium text-zinc-600 dark:text-zinc-300">{salespersonName}</p>
           </div>
