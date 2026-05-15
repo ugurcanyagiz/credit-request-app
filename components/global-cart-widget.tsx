@@ -112,8 +112,6 @@ export function GlobalCartWidget() {
   const [isRemovingAll, setIsRemovingAll] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [removeAllError, setRemoveAllError] = useState<string | null>(null);
-  const [pendingPictureFiles, setPendingPictureFiles] = useState<File[]>([]);
-  const [isPhotoUploadConfirmOpen, setIsPhotoUploadConfirmOpen] = useState(false);
   const [isRemoveAllConfirmOpen, setIsRemoveAllConfirmOpen] = useState(false);
   const [notes, setNotes] = useState("");
   const [pickupSelectionsById, setPickupSelectionsById] = useState<Record<string, boolean>>({});
@@ -235,8 +233,6 @@ export function GlobalCartWidget() {
     setIsUploadingPictures(false);
     setSelectedPicture(null);
     setIsPreviewImageBroken(false);
-    setPendingPictureFiles([]);
-    setIsPhotoUploadConfirmOpen(false);
     setIsRemoveAllConfirmOpen(false);
     setSendError(null);
     setRemoveAllError(null);
@@ -294,7 +290,7 @@ export function GlobalCartWidget() {
   }
 
   function onPickPictures(event: ReactMouseEvent<HTMLButtonElement>) {
-    if (isUploadingPictures || isPhotoUploadConfirmOpen) {
+    if (isUploadingPictures) {
       event.preventDefault();
       return;
     }
@@ -350,20 +346,7 @@ export function GlobalCartWidget() {
       return;
     }
 
-    setPendingPictureFiles(files);
-    setIsPhotoUploadConfirmOpen(true);
-  }
-
-  async function confirmPictureUpload() {
-    const files = pendingPictureFiles;
-    setPendingPictureFiles([]);
-    setIsPhotoUploadConfirmOpen(false);
-    await uploadSelectedPictures(files);
-  }
-
-  function cancelPictureUpload() {
-    setPendingPictureFiles([]);
-    setIsPhotoUploadConfirmOpen(false);
+    void uploadSelectedPictures(files);
   }
 
   async function removePicture(photoId: string) {
@@ -431,8 +414,6 @@ export function GlobalCartWidget() {
       setSelectedPicture(null);
       setItems([]);
       setPictures([]);
-      setPendingPictureFiles([]);
-      setIsPhotoUploadConfirmOpen(false);
       setIsRemoveAllConfirmOpen(false);
       setNotes("");
       setPhotoError(null);
@@ -790,35 +771,12 @@ export function GlobalCartWidget() {
                   <button
                     type="button"
                     onClick={onPickPictures}
-                    disabled={isUploadingPictures || isPhotoUploadConfirmOpen}
+                    disabled={isUploadingPictures}
                     className="inline-flex h-10 min-w-[116px] items-center justify-center whitespace-nowrap rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                   >
                     {isUploadingPictures ? "Uploading..." : "Add Photos"}
                   </button>
                 </div>
-
-                {isPhotoUploadConfirmOpen ? (
-                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    <p className="font-semibold">Please make sure LOT NUMBER is visible.</p>
-                    <p className="mt-1 text-xs">Upload {pendingPictureFiles.length} selected photo{pendingPictureFiles.length === 1 ? "" : "s"}?</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void confirmPictureUpload()}
-                        className="inline-flex h-8 items-center justify-center rounded-lg bg-amber-900 px-3 text-xs font-semibold text-white transition hover:bg-amber-800"
-                      >
-                        Upload Photos
-                      </button>
-                      <button
-                        type="button"
-                        onClick={cancelPictureUpload}
-                        className="inline-flex h-8 items-center justify-center rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 transition hover:bg-amber-100"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
 
                 <div className="mt-4 min-h-14 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-zinc-900 p-3">
                   {isUploadingPictures ? (

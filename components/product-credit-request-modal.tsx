@@ -252,11 +252,6 @@ export function ProductCreditRequestModal({ item, customerCode, invoiceNo, invoi
       return;
     }
 
-    const isConfirmed = window.confirm("Please make sure LOT NUMBER is visible.");
-    if (!isConfirmed) {
-      return;
-    }
-
     setIsUploadingPicture(true);
     setPictureError(null);
     setPictureSuccess(null);
