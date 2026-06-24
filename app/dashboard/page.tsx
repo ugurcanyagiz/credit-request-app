@@ -12,48 +12,6 @@ type CustomerRow = {
   customer_name: string | null;
 };
 
-type SalespersonRow = {
-  salesperson: string | null;
-};
-
-async function fetchSalespeople() {
-  const supabaseAdmin = getSupabaseAdmin();
-  const pageSize = 1000;
-  let from = 0;
-  let hasMore = true;
-  const salespeople = new Set<string>();
-
-  while (hasMore) {
-    const to = from + pageSize - 1;
-    const { data, error } = await supabaseAdmin
-      .from("credit_rows")
-      .select("salesperson")
-      .not("salesperson", "is", null)
-      .order("salesperson", { ascending: true })
-      .range(from, to);
-
-    if (error) {
-      console.error("Failed to fetch dashboard salespeople", error);
-      throw new Error("Failed to fetch dashboard salespeople");
-    }
-
-    const rows = (data as SalespersonRow[]) ?? [];
-
-    for (const row of rows) {
-      const trimmedSalesperson = row.salesperson?.trim();
-
-      if (trimmedSalesperson) {
-        salespeople.add(trimmedSalesperson);
-      }
-    }
-
-    hasMore = rows.length === pageSize;
-    from += pageSize;
-  }
-
-  return Array.from(salespeople).sort((left, right) => left.localeCompare(right, undefined, { sensitivity: "base" }));
-}
-
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -64,8 +22,6 @@ export default async function DashboardPage() {
   const isAdmin = isAdminUser(session.user.name);
 
   if (isAdmin) {
-    const salespeople = await fetchSalespeople();
-
     return (
       <main className="min-h-screen bg-slate-100 px-4 py-8 dark:bg-slate-950 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-7xl">
@@ -79,7 +35,7 @@ export default async function DashboardPage() {
               Welcome, {session.user.salespersonName}
             </p>
           </div>
-          <AdminDashboard salespeople={salespeople} />
+          <AdminDashboard />
         </div>
       </main>
     );
