@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
@@ -13,48 +12,6 @@ type CustomerRow = {
   customer_name: string | null;
 };
 
-type SalespersonRow = {
-  salesperson: string | null;
-};
-
-async function fetchSalespeople() {
-  const supabaseAdmin = getSupabaseAdmin();
-  const pageSize = 1000;
-  let from = 0;
-  let hasMore = true;
-  const salespeople = new Set<string>();
-
-  while (hasMore) {
-    const to = from + pageSize - 1;
-    const { data, error } = await supabaseAdmin
-      .from("credit_rows")
-      .select("salesperson")
-      .not("salesperson", "is", null)
-      .order("salesperson", { ascending: true })
-      .range(from, to);
-
-    if (error) {
-      console.error("Failed to fetch dashboard salespeople", error);
-      throw new Error("Failed to fetch dashboard salespeople");
-    }
-
-    const rows = (data as SalespersonRow[]) ?? [];
-
-    for (const row of rows) {
-      const trimmedSalesperson = row.salesperson?.trim();
-
-      if (trimmedSalesperson) {
-        salespeople.add(trimmedSalesperson);
-      }
-    }
-
-    hasMore = rows.length === pageSize;
-    from += pageSize;
-  }
-
-  return Array.from(salespeople).sort((left, right) => left.localeCompare(right, undefined, { sensitivity: "base" }));
-}
-
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -65,14 +22,21 @@ export default async function DashboardPage() {
   const isAdmin = isAdminUser(session.user.name);
 
   if (isAdmin) {
-    const salespeople = await fetchSalespeople();
-
     return (
-      <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-10">
-        <h1 className="text-2xl font-semibold">Turkana Food INC.</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Credit Request Form Creator</p>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">Welcome, {session.user.salespersonName}</p>
-        <AdminDashboard salespeople={salespeople} />
+      <main className="min-h-screen bg-slate-100 px-4 py-8 dark:bg-slate-950 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-blue-700 dark:text-blue-400">Turkana Food INC.</p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Admin Dashboard</h1>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Credit Request Form Creator</p>
+            </div>
+            <p className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
+              Welcome, {session.user.salespersonName}
+            </p>
+          </div>
+          <AdminDashboard />
+        </div>
       </main>
     );
   }
