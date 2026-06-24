@@ -30,7 +30,6 @@ export default async function DashboardPage() {
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.25em] text-blue-700 dark:text-blue-400">Turkana Food INC.</p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Admin Dashboard</h1>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Credit Request Form Creator</p>
             </div>
             <AdminLogoutButton />
           </div>
