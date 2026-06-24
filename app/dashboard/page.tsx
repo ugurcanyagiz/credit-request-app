@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import { AdminDashboard } from "@/components/admin-dashboard";
+import { AdminLogoutButton } from "@/components/admin-logout-button";
 import { DashboardCustomers } from "@/components/dashboard-customers";
 import { authOptions } from "@/lib/auth";
 import { isAdminUser } from "@/lib/is-admin-user";
@@ -31,9 +32,7 @@ export default async function DashboardPage() {
               <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Admin Dashboard</h1>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Credit Request Form Creator</p>
             </div>
-            <p className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
-              Welcome, {session.user.salespersonName}
-            </p>
+            <AdminLogoutButton />
           </div>
           <AdminDashboard />
         </div>
