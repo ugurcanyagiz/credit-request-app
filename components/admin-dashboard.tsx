@@ -115,6 +115,20 @@ export function AdminDashboard() {
     );
   }
 
+  function clearSelectedFile() {
+    if (isUploading) {
+      return;
+    }
+
+    setSelectedFile(undefined);
+    setUploadErrorMessage(undefined);
+    setUploadProgressText("Waiting for CSV file");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   async function uploadCsv() {
     if (!selectedFile || isUploading) {
       return;
@@ -159,21 +173,34 @@ export function AdminDashboard() {
             CSV uploader
           </h3>
 
-          <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center transition hover:border-blue-400 hover:bg-blue-50/60 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-blue-500 dark:hover:bg-blue-950/30">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="sr-only"
-              onChange={handleFileChange}
-            />
-            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-3xl text-white">
-              ↑
-            </span>
-            <span className="mt-4 text-base font-semibold text-slate-950 dark:text-white">
-              {selectedFile?.name ?? "Choose CSV file"}
-            </span>
-          </label>
+          <div className="relative mt-6">
+            {selectedFile ? (
+              <button
+                type="button"
+                onClick={clearSelectedFile}
+                disabled={isUploading}
+                aria-label="Remove selected CSV file"
+                className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-bold text-slate-500 shadow-sm ring-1 ring-slate-200 transition hover:text-red-600 hover:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-700 dark:hover:text-red-400 dark:hover:ring-red-700"
+              >
+                ×
+              </button>
+            ) : null}
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center transition hover:border-blue-400 hover:bg-blue-50/60 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-blue-500 dark:hover:bg-blue-950/30">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="sr-only"
+                onChange={handleFileChange}
+              />
+              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-3xl text-white">
+                ↑
+              </span>
+              <span className="mt-4 text-base font-semibold text-slate-950 dark:text-white">
+                {selectedFile?.name ?? "Choose CSV file"}
+              </span>
+            </label>
+          </div>
 
           <button
             type="button"
@@ -220,7 +247,9 @@ export function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedSalesperson(salesperson);
+                      setSelectedSalesperson(
+                        isSelected ? undefined : salesperson,
+                      );
                       setPassword("");
                       setPasswordSaveMessage(undefined);
                       setUserSettingsError(undefined);
