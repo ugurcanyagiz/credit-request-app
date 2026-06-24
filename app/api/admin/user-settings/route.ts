@@ -4,16 +4,15 @@ import { authOptions } from "@/lib/auth";
 import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
-type CreditRowsSalesperson = {
-  salesperson: string | null;
+type AppUserRow = {
+  username: string | null;
+  salesperson_name: string | null;
 };
 
 type PasswordUpdateBody = {
   salesperson?: unknown;
   password?: unknown;
 };
-
-const CREDIT_ROWS_PAGE_SIZE = 1000;
 
 async function assertAdminSession() {
   const session = await getServerSession(authOptions);
@@ -37,47 +36,24 @@ export async function GET() {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const salespersonNames = new Set<string>();
-  let page = 0;
+  const { data, error } = await supabaseAdmin
+    .from("app_users")
+    .select("username,salesperson_name")
+    .eq("is_active", true)
+    .eq("role", "salesperson")
+    .order("salesperson_name", { ascending: true });
 
-  while (true) {
-    const from = page * CREDIT_ROWS_PAGE_SIZE;
-    const to = from + CREDIT_ROWS_PAGE_SIZE - 1;
-    const { data, error } = await supabaseAdmin
-      .from("credit_rows")
-      .select("salesperson")
-      .not("salesperson", "is", null)
-      .order("salesperson", { ascending: true })
-      .range(from, to);
-
-    if (error) {
-      console.error("Failed to fetch user settings salespeople", error);
-      return Response.json(
-        { error: "Failed to fetch salespeople" },
-        { status: 500 },
-      );
-    }
-
-    const rows = (data as CreditRowsSalesperson[]) ?? [];
-
-    rows.forEach((row) => {
-      const salesperson = row.salesperson?.trim();
-
-      if (salesperson) {
-        salespersonNames.add(salesperson);
-      }
-    });
-
-    if (rows.length < CREDIT_ROWS_PAGE_SIZE) {
-      break;
-    }
-
-    page += 1;
+  if (error) {
+    console.error("Failed to fetch app users for user settings", error);
+    return Response.json(
+      { error: "Failed to fetch app users" },
+      { status: 500 },
+    );
   }
 
-  const salespeople = Array.from(salespersonNames).sort((first, second) =>
-    first.localeCompare(second),
-  );
+  const salespeople = ((data as AppUserRow[]) ?? [])
+    .map((row) => row.salesperson_name?.trim() || row.username?.trim())
+    .filter((name): name is string => Boolean(name));
 
   return Response.json({ salespeople });
 }

@@ -344,20 +344,19 @@ export function AdminDashboard() {
               User Settings
             </h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Select a salesperson from credit_rows and set a new login
-              password.
+              Select a user from app_users and set a new login password.
             </p>
           </div>
 
           <div className="mt-6 max-h-72 space-y-2 overflow-y-auto pr-1">
             {isLoadingSalespeople ? (
               <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-                Loading salespeople...
+                Loading users...
               </p>
             ) : null}
             {!isLoadingSalespeople && salespeople.length === 0 ? (
               <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-                No salesperson found in credit_rows.
+                No active salesperson user found in app_users.
               </p>
             ) : null}
             {salespeople.map((salesperson) => {
