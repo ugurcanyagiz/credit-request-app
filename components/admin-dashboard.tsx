@@ -31,9 +31,7 @@ type DuplicateRemoveResponse = {
 export function AdminDashboard() {
   const [selectedFile, setSelectedFile] = useState<File>();
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgressText, setUploadProgressText] = useState(
-    "Waiting for CSV file",
-  );
+  const [uploadProgressText, setUploadProgressText] = useState("");
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string>();
   const [isRemovingDuplicates, setIsRemovingDuplicates] = useState(false);
   const [duplicateRemoveMessage, setDuplicateRemoveMessage] = useState<string>();
@@ -117,9 +115,7 @@ export function AdminDashboard() {
     const file = event.target.files?.[0];
     setSelectedFile(file);
     setUploadErrorMessage(undefined);
-    setUploadProgressText(
-      file ? `${file.name} selected` : "Waiting for CSV file",
-    );
+    setUploadProgressText(file ? `${file.name} selected` : "");
   }
 
   function clearSelectedFile() {
@@ -129,7 +125,7 @@ export function AdminDashboard() {
 
     setSelectedFile(undefined);
     setUploadErrorMessage(undefined);
-    setUploadProgressText("Waiting for CSV file");
+    setUploadProgressText("");
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -202,13 +198,9 @@ export function AdminDashboard() {
 
   return (
     <section className="mt-8 space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-6">
-          <h3 className="text-xl font-bold tracking-tight text-slate-950 dark:text-white">
-            CSV uploader
-          </h3>
-
-          <div className="relative mt-6">
+      <div className="grid items-stretch gap-6 xl:grid-cols-2">
+        <div className="flex h-full min-h-[430px] flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-6">
+          <div className="relative">
             {selectedFile ? (
               <button
                 type="button"
@@ -247,16 +239,18 @@ export function AdminDashboard() {
           </button>
 
           <div className="mt-5 rounded-2xl bg-slate-50 p-4 dark:bg-slate-900/70">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {uploadProgressText}
-            </p>
+            {uploadProgressText ? (
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {uploadProgressText}
+              </p>
+            ) : null}
             {uploadErrorMessage ? (
               <p className="mt-2 text-sm text-red-600 dark:text-red-400">
                 {uploadErrorMessage}
               </p>
             ) : null}
 
-            <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
               <button
                 type="button"
                 onClick={removeDuplicates}
@@ -267,10 +261,6 @@ export function AdminDashboard() {
                   ? "Removing duplicates..."
                   : "Duplicate Remove"}
               </button>
-              <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                Deletes duplicate credit rows that match by customer code,
-                invoice no, item no, quantity, and piece price.
-              </p>
               {duplicateRemoveMessage ? (
                 <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                   {duplicateRemoveMessage}
@@ -285,12 +275,12 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-6">
+        <div className="flex h-full min-h-[430px] flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-6">
           <h3 className="text-xl font-bold tracking-tight text-slate-950 dark:text-white">
             User Settings
           </h3>
 
-          <div className="mt-6 max-h-72 space-y-2 overflow-y-auto pr-1">
+          <div className="mt-6 flex-1 space-y-2 overflow-y-auto pr-1">
             {isLoadingSalespeople ? (
               <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
                 Loading users...
