@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { isAdminUser } from "@/lib/is-admin-user";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
-type RemoveDuplicatesRpcResponse = number | { deleted_count?: number } | null;
+type RemoveDuplicatesRpcResponse = number | null;
 
 type SupabaseErrorDetails = {
   message: string;
@@ -14,11 +14,11 @@ type SupabaseErrorDetails = {
 };
 
 function getDeletedCount(data: RemoveDuplicatesRpcResponse) {
-  if (typeof data === "number") {
-    return data;
+  if (typeof data !== "number" || !Number.isInteger(data) || data < 0) {
+    throw new Error("Supabase RPC returned an invalid deleted row count.");
   }
 
-  return data?.deleted_count ?? 0;
+  return data;
 }
 
 function serializeSupabaseError(error: unknown): SupabaseErrorDetails {
@@ -95,7 +95,7 @@ export async function POST() {
 
     return Response.json(
       {
-        error: "Duplicate remove failed before the Supabase RPC could complete.",
+        error: "Duplicate remove failed before the Supabase RPC could complete successfully.",
         supabase: { message },
       },
       { status: 500 },
