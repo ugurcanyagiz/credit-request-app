@@ -42,6 +42,7 @@ export function AdminDashboard() {
   const [isRemovingDuplicates, setIsRemovingDuplicates] = useState(false);
   const [duplicateRemoveMessage, setDuplicateRemoveMessage] = useState<string>();
   const [duplicateRemoveError, setDuplicateRemoveError] = useState<string>();
+  const [duplicateRemoveDeletedRows, setDuplicateRemoveDeletedRows] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [salespeople, setSalespeople] = useState<string[]>([]);
   const [selectedSalesperson, setSelectedSalesperson] = useState<string>();
@@ -166,24 +167,36 @@ export function AdminDashboard() {
     }
 
     setIsRemovingDuplicates(true);
-    setDuplicateRemoveMessage(undefined);
+    setDuplicateRemoveMessage("Removing duplicates...");
     setDuplicateRemoveError(undefined);
+    setDuplicateRemoveDeletedRows(0);
 
     try {
-      const response = await fetch("/api/admin/credit-rows-duplicates", {
-        method: "POST",
-      });
-      const payload = (await response.json()) as DuplicateRemoveResponse;
+      let totalDeletedRows = 0;
 
-      if (!response.ok) {
-        console.error("Duplicate remove failed", payload);
-        setDuplicateRemoveError(formatDuplicateRemoveError(payload));
-        return;
+      while (true) {
+        const response = await fetch("/api/admin/credit-rows-duplicates", {
+          method: "POST",
+        });
+        const payload = (await response.json()) as DuplicateRemoveResponse;
+
+        if (!response.ok) {
+          console.error("Duplicate remove failed", payload);
+          setDuplicateRemoveError(formatDuplicateRemoveError(payload));
+          return;
+        }
+
+        const deletedRows = payload.deletedRows ?? 0;
+        totalDeletedRows += deletedRows;
+        setDuplicateRemoveDeletedRows(totalDeletedRows);
+
+        if (deletedRows === 0) {
+          setDuplicateRemoveMessage(
+            `${totalDeletedRows.toLocaleString()} duplicate rows removed successfully.`,
+          );
+          return;
+        }
       }
-
-      setDuplicateRemoveMessage(
-        `${(payload.deletedRows ?? 0).toLocaleString()} duplicate rows removed.`,
-      );
     } catch (error) {
       console.error("Duplicate remove request failed", error);
       setDuplicateRemoveError(
@@ -298,9 +311,14 @@ export function AdminDashboard() {
                   : "Duplicate Remove"}
               </button>
               {duplicateRemoveMessage ? (
-                <p className="mt-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                  {duplicateRemoveMessage}
-                </p>
+                <div className="mt-3 space-y-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                  <p>{duplicateRemoveMessage}</p>
+                  {isRemovingDuplicates ? (
+                    <p>
+                      Total removed: {duplicateRemoveDeletedRows.toLocaleString()}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
               {duplicateRemoveError ? (
                 <p className="mt-3 text-sm text-red-600 dark:text-red-400">
